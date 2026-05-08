@@ -230,6 +230,7 @@ export type Database = {
           email: string | null
           external_id: string | null
           id: string
+          image_url: string | null
           industries: string[] | null
           is_active: boolean
           link: string | null
@@ -245,6 +246,7 @@ export type Database = {
           email?: string | null
           external_id?: string | null
           id?: string
+          image_url?: string | null
           industries?: string[] | null
           is_active?: boolean
           link?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           email?: string | null
           external_id?: string | null
           id?: string
+          image_url?: string | null
           industries?: string[] | null
           is_active?: boolean
           link?: string | null

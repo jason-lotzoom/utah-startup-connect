@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowRight, ExternalLink, Loader2, Send } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/navigator")({
   head: () => ({
@@ -202,32 +203,42 @@ function Quiz({
 }
 
 function rankResources(resources: any[], q: Quiz) {
-  const needs = (q.needs || []).map((n) => n.toLowerCase());
-  const wants = [
-    q.industry?.toLowerCase() || "",
-    q.location?.toLowerCase() || "",
-    q.community?.toLowerCase() || "",
-    ...needs,
-  ].filter(Boolean);
+  const tokenize = (s?: string) =>
+    (s || "")
+      .toLowerCase()
+      .split(/[\s/,&]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 2 && !["the", "and", "for", "any", "other"].includes(t));
+
+  const needTokens = (q.needs || []).flatMap(tokenize);
+  const industryTokens = tokenize(q.industry);
+  const locationTokens = tokenize(q.location);
+  const communityTokens = q.community && q.community !== "Any" ? tokenize(q.community) : [];
+
+  const arrHas = (arr: string[] | undefined, tokens: string[]) => {
+    if (!arr || !tokens.length) return false;
+    const joined = arr.join(" ").toLowerCase();
+    return tokens.some((t) => joined.includes(t));
+  };
 
   const scored = resources.map((r) => {
-    const haystack = [
-      r.title,
-      r.description,
-      ...(r.industries || []),
-      ...(r.topics || []),
-      ...(r.locations || []),
-      ...(r.communities || []),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
     let score = 0;
-    for (const w of wants) if (w && haystack.includes(w)) score += 1;
-    if (q.community && q.community !== "Any" && (r.communities || []).some((c: string) => c.toLowerCase().includes(q.community.toLowerCase()))) score += 2;
+    if (arrHas(r.locations, locationTokens)) score += 5;
+    if (communityTokens.length && arrHas(r.communities, communityTokens)) score += 5;
+    if (arrHas(r.industries, industryTokens)) score += 3;
+    if (arrHas(r.topics, needTokens)) score += 3;
+    if (arrHas(r.industries, needTokens)) score += 1;
+    const text = `${r.title || ""} ${r.description || ""}`.toLowerCase();
+    for (const t of [...needTokens, ...industryTokens]) {
+      if (text.includes(t)) score += 0.5;
+    }
     return { ...r, _score: score };
   });
-  return scored.sort((a, b) => b._score - a._score).slice(0, 50);
+
+  return scored
+    .filter((r) => r._score > 0)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 24);
 }
 
 function Results({
@@ -255,7 +266,7 @@ function Results({
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[380px_1fr]">
       <aside className="lg:sticky lg:top-6 lg:self-start">
-        <ChatPanel quiz={quiz} resultsCount={results?.length ?? 0} />
+        <ChatPanel quiz={quiz} resultsCount={results?.length ?? 0} loading={loading} />
         <Card className="mt-4 p-4">
           <p className="text-xs uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "var(--font-accent)" }}>
             Filter by topic
@@ -293,37 +304,14 @@ function Results({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            {filtered.length === 0 && (
+              <p className="col-span-full text-sm text-muted-foreground">
+                No matches yet. Try the quiz again with broader needs or a different region.
+              </p>
+            )}
             {filtered.map((r) => (
-              <Card key={r.id} className="p-5 transition hover:shadow-[var(--shadow-warm)]">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                      {r.title}
-                    </h3>
-                    {r.description && (
-                      <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{r.description}</p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(r.topics || []).slice(0, 4).map((t: string) => (
-                        <Badge key={t} variant="secondary" className="text-[10px]">
-                          {t}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  {r.link && (
-                    <a
-                      href={r.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
-                    >
-                      Visit <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              </Card>
+              <ResourceCard key={r.id} r={r} />
             ))}
           </div>
         )}
@@ -332,13 +320,114 @@ function Results({
   );
 }
 
-function ChatPanel({ quiz, resultsCount }: { quiz: Quiz; resultsCount: number }) {
+function hashHue(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
+function initials(title: string) {
+  return title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function ResourceCard({ r }: { r: any }) {
+  const hue = hashHue(r.id);
+  return (
+    <Link
+      to="/navigator/resource/$id"
+      params={{ id: r.id }}
+      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition hover:shadow-[var(--shadow-warm)]"
+    >
+      <div
+        className="relative aspect-[16/9] w-full overflow-hidden"
+        style={
+          r.image_url
+            ? undefined
+            : {
+                background: `linear-gradient(135deg, hsl(${hue} 65% 55%), hsl(${(hue + 40) % 360} 70% 40%))`,
+              }
+        }
+      >
+        {r.image_url ? (
+          <img
+            src={r.image_url}
+            alt={r.title}
+            loading="lazy"
+            className="h-full w-full object-cover transition group-hover:scale-105"
+          />
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center text-4xl font-bold text-white/90"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {initials(r.title || "")}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="text-lg font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+          {r.title}
+        </h3>
+        {r.description && (
+          <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{r.description}</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(r.topics || []).slice(0, 3).map((t: string) => (
+            <Badge key={t} variant="secondary" className="text-[10px]">
+              {t}
+            </Badge>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+          <span className="text-xs font-semibold text-primary">View details →</span>
+          {r.link && (
+            <a
+              href={r.link}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+            >
+              Visit site <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function ChatPanel({
+  quiz,
+  resultsCount,
+  loading,
+}: {
+  quiz: Quiz;
+  resultsCount: number;
+  loading: boolean;
+}) {
+  const greeting = loading
+    ? `Matching you with Utah programs for a ${quiz.stage} ${quiz.industry} company in ${quiz.location}…`
+    : `I'm your Navigator AI. I found ${resultsCount} matches for a ${quiz.stage} ${quiz.industry} company in ${quiz.location}. Ask me anything — like "which programs offer non-dilutive capital?"`;
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([
-    {
-      role: "assistant",
-      content: `I'm your Navigator AI. I see ${resultsCount} matches for a ${quiz.stage} ${quiz.industry} company in ${quiz.location}. Ask me anything — like "which programs offer non-dilutive capital?"`,
-    },
+    { role: "assistant", content: greeting },
   ]);
+
+  // Refresh greeting when results arrive, but only if user hasn't started chatting
+  useEffect(() => {
+    setMessages((m) => {
+      if (m.length === 1 && m[0].role === "assistant") {
+        return [{ role: "assistant", content: greeting }];
+      }
+      return m;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, resultsCount]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
