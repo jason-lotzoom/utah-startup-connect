@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
+import { SiteFooter } from "@/components/SiteNav";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const { user, isAdmin } = useAuth();
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "var(--font-body)" }}>
       {/* Hero */}
@@ -18,10 +21,16 @@ function Index() {
             <span className="inline-block h-3 w-3 rounded-full bg-white/90" />
             5iO
           </div>
-          <div className="hidden gap-8 text-sm uppercase tracking-widest md:flex" style={{ fontFamily: "var(--font-accent)" }}>
-            <a href="#navigator" className="hover:text-white/80">Navigator</a>
-            <a href="#map" className="hover:text-white/80">Startup Map</a>
-            <a href="#about" className="hover:text-white/80">About</a>
+          <div className="hidden items-center gap-7 text-sm uppercase tracking-widest md:flex" style={{ fontFamily: "var(--font-accent)" }}>
+            <Link to="/navigator" className="hover:text-white/80">Navigator</Link>
+            <Link to="/map" className="hover:text-white/80">Startup Map</Link>
+            {user && <Link to="/dashboard" className="hover:text-white/80">Dashboard</Link>}
+            {isAdmin && <Link to="/admin" className="hover:text-white/80">Admin</Link>}
+            {user ? null : (
+              <Link to="/auth/login" className="rounded-full border border-white/40 px-4 py-1.5 text-xs hover:bg-white/10">
+                Sign in
+              </Link>
+            )}
           </div>
         </nav>
 
@@ -39,20 +48,20 @@ function Index() {
             Two tools. One platform. Built for Utah founders.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <a
-              href="#navigator"
+            <Link
+              to="/navigator"
               className="rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-[oklch(0.52_0.16_38)] shadow-lg transition hover:bg-white/90"
               style={{ fontFamily: "var(--font-accent)", letterSpacing: "0.05em" }}
             >
               Find Resources →
-            </a>
-            <a
-              href="#map"
+            </Link>
+            <Link
+              to="/map"
               className="rounded-2xl border border-white/40 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
               style={{ fontFamily: "var(--font-accent)", letterSpacing: "0.05em" }}
             >
               Explore the Map →
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -83,9 +92,7 @@ function Index() {
         </h2>
 
         <div className="mt-12 grid gap-8 md:grid-cols-2">
-          <article
-            className="rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1"
-          >
+          <Link to="/navigator" className="block rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1">
             <div className="mb-4 inline-block rounded-full bg-[oklch(0.52_0.16_38)]/10 px-3 py-1 text-xs uppercase tracking-widest text-[oklch(0.52_0.16_38)]" style={{ fontFamily: "var(--font-accent)" }}>
               Founder's Navigator
             </div>
@@ -95,12 +102,13 @@ function Index() {
             <p className="mb-6 text-muted-foreground">
               An AI-guided quiz matches you with personalized state programs from a curated library of 213 Utah resources. Then chat with our AI to refine.
             </p>
-            <span className="text-sm font-semibold text-[oklch(0.52_0.16_38)]">Coming next →</span>
-          </article>
+            <span className="text-sm font-semibold text-[oklch(0.52_0.16_38)]">Open Navigator →</span>
+          </Link>
 
-          <article
+          <Link
+            to="/map"
             id="map"
-            className="rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1"
+            className="block rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1"
           >
             <div className="mb-4 inline-block rounded-full bg-[oklch(0.58_0.10_230)]/10 px-3 py-1 text-xs uppercase tracking-widest text-[oklch(0.58_0.10_230)]" style={{ fontFamily: "var(--font-accent)" }}>
               Utah Startup Map
@@ -111,8 +119,8 @@ function Index() {
             <p className="mb-6 text-muted-foreground">
               222 verified Utah startups across 7 sectors. Filter by sector, stage, or hiring status — and claim your own listing.
             </p>
-            <span className="text-sm font-semibold text-[oklch(0.58_0.10_230)]">Coming next →</span>
-          </article>
+            <span className="text-sm font-semibold text-[oklch(0.58_0.10_230)]">Open Map →</span>
+          </Link>
         </div>
       </section>
 
@@ -137,16 +145,7 @@ function Index() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-[oklch(0.22_0.04_280)] py-12 text-white/80">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>5iO</div>
-          <p className="mt-2 text-sm">Build the Startup State.</p>
-          <p className="mt-6 text-xs text-white/50">
-            Presented by Utah Governor's Office of Economic Development · startup.utah.gov
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
