@@ -1,60 +1,48 @@
-# Navigator fixes & resource detail pages
+# Fix the Map page: real map + real hiring data
 
-## Issues to fix
+## What's actually broken
 
-1. **Chat says "0 matches" while page shows 50** — `ChatPanel` is rendered with `resultsCount={results?.length ?? 0}` and its initial message is captured once on first mount (when results are still `null`). It never updates when results arrive.
-2. **Always 50 results / no real matching** — `rankResources` keeps every resource (score 0 included) and just slices the top 50, so the answer is the same regardless of quiz answers. Matching logic is also too literal (e.g. "Tech / Software" never substring-matches `topics` like "Software").
-3. **External "Visit" links go straight off-site** — no internal landing/detail page for a program.
-4. **One-column cards, no imagery** — list feels sparse.
+1. **Interactive map offline** — `VITE_MAPBOX_TOKEN` is not present in the build. Mapbox needs a *build-time* `VITE_…` variable, which on Lovable lives in **Workspace Settings → Build Secrets** (not the runtime secrets I can add for you). All 220 companies already have lat/long, so the moment the token is in the build, the map renders.
+2. **Hiring = 0** — every row in `companies.hiring_status` is `false`, and `job_postings` is completely empty (0 rows). Nothing is wrong with the UI; there is just no hiring data in the database. It needs to be populated.
 
 ## Plan
 
-### 1. Smarter ranking + correct counts
-- Rewrite `rankResources` to:
-  - Tokenize quiz answers (split "Tech / Software" → ["tech","software"], lowercase).
-  - Score against `topics`, `industries`, `locations`, `communities`, plus `title` / `description` (lower weight).
-  - Heavy weight on community + location exact match, medium on industry/needs, low on text contains.
-  - Filter out `score === 0`, cap at top 12 by default (still configurable via "show more" later).
-- Remove placeholder 50-result behavior.
+### 1. Mapbox token (you do this once)
+- You add `VITE_MAPBOX_TOKEN` in **Workspace Settings → Build Secrets** with a Mapbox public token (`pk.…` from account.mapbox.com).
+- Next build picks it up automatically; the offline card disappears and the dark map with 220 markers renders. No code change needed — the route already supports it.
 
-### 2. Chat reflects real result count
-- Lift the greeting into a `useMemo` based on `resultsCount` (or rebuild the first assistant message via `useEffect` when `resultsCount` changes and the conversation is still at its initial state).
-- Pass `loading` so the panel shows a "matching…" state instead of "0 matches".
+### 2. Real hiring data via Firecrawl
+Link the existing **FireCrawl Meetup** connector to this project, then add a backend job that does the work:
 
-### 3. Internal resource detail page
-- Add `src/routes/navigator.resource.$id.tsx`:
-  - Loads the resource by id (public read, RLS already allows it).
-  - Shows hero image, title, full description, all tags (topics/industries/communities/locations), email, and a primary "Visit official site" external button (`link`, `target=_blank`).
-  - Back link to `/navigator`.
-  - SEO: `head()` with title/description from the resource.
-- In the results list, the card itself becomes a `<Link to="/navigator/resource/$id">` (whole-card click). Keep a small secondary "Visit site ↗" external link inside the card for power users who want to skip the detail page.
+- New edge function `refresh-hiring` (server-only, uses `FIRECRAWL_API_KEY`):
+  - Pulls every active company that has a `website`.
+  - Calls Firecrawl `map` to find a careers/jobs page (`/careers`, `/jobs`, `/join-us`, `/work-with-us`, etc.).
+  - Calls Firecrawl `scrape` on the best candidate with structured JSON extraction, schema:
+    ```
+    { is_hiring: boolean, jobs: [{ title, location?, type?, url? }] }
+    ```
+  - Updates `companies.hiring_status` and replaces that company's rows in `job_postings` (sets `ai_imported = true`, `is_active = true`).
+  - Throttled (e.g. 5 concurrent, ~1 req/sec) to stay inside Firecrawl rate limits and credit budget.
+  - Returns `{ scanned, hiring, jobs_imported, errors }`.
 
-### 4. Two-column cards with images
-- Add an optional `image_url text` column to `public.resources` (nullable, no default) via migration so admins can curate cover art later.
-- Render a 16:9 cover at the top of each card:
-  - If `image_url` is set, use it.
-  - Otherwise, render a deterministic branded gradient block (hash of `id` → hue) with the program initials as a fallback — keeps the grid visually consistent without bad stock photos.
-- Grid: `grid sm:grid-cols-2 gap-5` (still single-column under `sm`).
-- Card layout: image, then title, 3-line clamped description, top 3 topic badges, footer row with "View details →" and external "Visit ↗".
+- Trigger options (pick in the questions below):
+  - **Admin button** in `/admin` to run on demand + show last-run summary.
+  - **Daily cron** via `pg_cron` hitting `/api/public/refresh-hiring` with a shared secret header.
 
-### 5. Admin polish (out of scope for this turn unless you want it)
-- The `/admin` resources editor would need an `image_url` field. Flag for next pass — say the word and I'll wire it up.
+- Realtime: enable Supabase Realtime on `companies` and `job_postings` so the Map page hero stat ("Hiring now") and per-card "Hiring" badge update live as the function writes results — no refresh needed.
 
-## Files touched
+### 3. Map page polish (small)
+- Hero "Hiring now" stat already reads `companies.hiring_status`; once #2 runs it becomes accurate. Add a tiny "Updated <relative time>" line under the stats so users see the data is fresh.
+- Marker color stays: amber = not hiring, primary = hiring.
 
-```
-src/routes/navigator.tsx                 (ranking, chat greeting, 2-col grid, cover image)
-src/routes/navigator.resource.$id.tsx    (NEW — detail page)
-supabase/migrations/<timestamp>.sql      (NEW — add resources.image_url)
-```
+## Files
 
-No changes to backend functions, auth, or RLS.
+- NEW `supabase/functions/refresh-hiring/index.ts` — Firecrawl map + scrape + DB writes, service-role client.
+- NEW `src/routes/api/public/refresh-hiring.ts` — thin public proxy guarded by `REFRESH_HIRING_SECRET` (only if you pick the cron option).
+- EDIT `src/routes/map.index.tsx` — add realtime subscription on `companies`, add "Updated …" line.
+- EDIT `src/routes/admin.tsx` — add "Refresh hiring data" button + last-run summary (only if you pick the admin option).
+- Migration — enable realtime on `companies`, `job_postings`; optional `pg_cron` schedule.
 
-## Verification
+## What I need from you
 
-1. Reload `/navigator`, finish the quiz with e.g. Stage=Seed / Industry=Tech / Location=Salt Lake County / Needs=Capital → fewer than 50 results, ordered by relevance, chat greeting reads the actual count.
-2. Cards display in two columns with cover art / gradient fallback.
-3. Clicking a card opens `/navigator/resource/<id>` with the full description and a working external "Visit site" button.
-4. `restart quiz` re-runs and chat greeting updates again.
-
-Confirm and I'll build it. Want me to also add the `image_url` field to the admin editor in the same pass?
+I'll ask the questions next so I can build the exact right version.
