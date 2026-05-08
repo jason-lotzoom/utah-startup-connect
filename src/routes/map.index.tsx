@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Briefcase, MapPin, Plus, Search } from "lucide-react";
-import Map, { Marker, Popup, NavigationControl, useMap } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
+import Map, { Marker, Popup, NavigationControl } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 export const Route = createFileRoute("/map/")({
   component: MapPage,
@@ -61,8 +61,8 @@ function MapPage() {
     });
   }, [companies, q, sector, stage, hiring]);
 
+  const mapboxToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) || "";
   const [popup, setPopup] = useState<any | null>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
   const geo = filtered.filter((c) => c.latitude && c.longitude);
 
   return (
@@ -98,80 +98,67 @@ function MapPage() {
 
       {/* Map / Fallback */}
       <section className="border-b border-border">
-        <div className="relative h-[560px] w-full overflow-hidden bg-[#0b0d12]">
-          <Map
-            initialViewState={{ longitude: -111.891, latitude: 39.8, zoom: 5.6, pitch: 45, bearing: -10 }}
-            mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-            style={{ width: "100%", height: "100%" }}
-            attributionControl={false}
-          >
-            <NavigationControl position="top-right" />
-            <FlyOnSelect target={popup} />
-            {geo.map((c) => {
-              const isHover = hovered === c.id;
-              const color = c.hiring_status ? "var(--primary)" : "var(--accent)";
-              return (
+        {mapboxToken ? (
+          <div className="h-[480px] w-full">
+            <Map
+              mapboxAccessToken={mapboxToken}
+              initialViewState={{ longitude: -111.8910, latitude: 40.7608, zoom: 6.2 }}
+              mapStyle="mapbox://styles/mapbox/dark-v11"
+              style={{ width: "100%", height: "100%" }}
+            >
+              <NavigationControl position="top-right" />
+              {geo.map((c) => (
                 <Marker
                   key={c.id}
                   longitude={Number(c.longitude)}
                   latitude={Number(c.latitude)}
-                  anchor="center"
                   onClick={(e) => {
                     e.originalEvent.stopPropagation();
                     setPopup(c);
                   }}
                 >
                   <div
-                    onMouseEnter={() => setHovered(c.id)}
-                    onMouseLeave={() => setHovered(null)}
-                    className="relative cursor-pointer"
-                    style={{ transform: isHover ? "scale(1.6)" : "scale(1)", transition: "transform 280ms cubic-bezier(.2,.8,.2,1)" }}
-                  >
-                    {c.hiring_status && (
-                      <span
-                        className="absolute inset-0 -m-2 rounded-full opacity-70"
-                        style={{ background: color, animation: "pulse-ring 2.2s ease-out infinite" }}
-                      />
-                    )}
-                    <span
-                      className="relative block h-3 w-3 rounded-full border-2 border-white"
-                      style={{ background: color, boxShadow: `0 0 14px ${c.hiring_status ? "rgba(217,93,57,.9)" : "rgba(232,180,120,.6)"}` }}
-                    />
-                  </div>
+                    className="h-3 w-3 cursor-pointer rounded-full border-2 border-white shadow"
+                    style={{ background: c.hiring_status ? "var(--primary)" : "var(--accent)" }}
+                  />
                 </Marker>
-              );
-            })}
-            {popup && popup.latitude && popup.longitude && (
-              <Popup
-                longitude={Number(popup.longitude)}
-                latitude={Number(popup.latitude)}
-                anchor="bottom"
-                offset={18}
-                onClose={() => setPopup(null)}
-                closeButton
-                closeOnClick={false}
-                className="cinematic-popup"
-              >
-                <div className="text-foreground min-w-[180px]">
-                  <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{popup.name}</p>
-                  {popup.sector && <p className="text-xs text-muted-foreground">{popup.sector}</p>}
-                  {popup.hiring_status && (
-                    <Badge className="mt-2 text-[10px]"><Briefcase className="mr-1 h-3 w-3" />Hiring</Badge>
-                  )}
-                  <Link
-                    to="/map/company/$id"
-                    params={{ id: popup.id }}
-                    className="mt-2 block text-xs text-primary hover:underline"
-                  >
-                    View details →
-                  </Link>
-                </div>
-              </Popup>
-            )}
-          </Map>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-background/60 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/60 to-transparent" />
-        </div>
+              ))}
+              {popup && popup.latitude && popup.longitude && (
+                <Popup
+                  longitude={Number(popup.longitude)}
+                  latitude={Number(popup.latitude)}
+                  anchor="bottom"
+                  onClose={() => setPopup(null)}
+                  closeButton
+                  closeOnClick={false}
+                >
+                  <div className="text-foreground">
+                    <p className="font-semibold">{popup.name}</p>
+                    {popup.sector && <p className="text-xs text-muted-foreground">{popup.sector}</p>}
+                    <Link
+                      to="/map/company/$id"
+                      params={{ id: popup.id }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View details →
+                    </Link>
+                  </div>
+                </Popup>
+              )}
+            </Map>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-7xl px-6 py-10">
+            <Card className="border-dashed bg-muted/40 p-8 text-center">
+              <MapPin className="mx-auto h-8 w-8 text-muted-foreground" />
+              <h3 className="mt-3 font-semibold">Interactive map is offline</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add <code className="rounded bg-background px-1.5 py-0.5">VITE_MAPBOX_TOKEN</code> to enable the
+                live map view. Browse the directory below in the meantime.
+              </p>
+            </Card>
+          </div>
+        )}
       </section>
 
       {/* Filters + List */}
@@ -280,21 +267,4 @@ function Chip({
       {label}
     </button>
   );
-}
-
-function FlyOnSelect({ target }: { target: any | null }) {
-  const { current: map } = useMap();
-  useEffect(() => {
-    if (!target || !map || !target.latitude || !target.longitude) return;
-    map.flyTo({
-      center: [Number(target.longitude), Number(target.latitude)],
-      zoom: 11,
-      pitch: 60,
-      bearing: -20,
-      speed: 1.2,
-      curve: 1.6,
-      essential: true,
-    });
-  }, [target, map]);
-  return null;
 }
