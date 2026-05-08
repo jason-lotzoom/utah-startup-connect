@@ -14,16 +14,298 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      claim_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          claimed_by: string | null
+          created_at: string
+          description: string | null
+          employee_count: string | null
+          full_address: string | null
+          hiring_status: boolean
+          id: string
+          is_claimed: boolean
+          is_verified: boolean
+          latitude: number | null
+          linkedin_url: string | null
+          logo_url: string | null
+          longitude: number | null
+          name: string
+          photos: string[] | null
+          sector: string | null
+          stage: string | null
+          status: string
+          submitted_by: string | null
+          updated_at: string
+          website: string | null
+          year_founded: number | null
+        }
+        Insert: {
+          claimed_by?: string | null
+          created_at?: string
+          description?: string | null
+          employee_count?: string | null
+          full_address?: string | null
+          hiring_status?: boolean
+          id?: string
+          is_claimed?: boolean
+          is_verified?: boolean
+          latitude?: number | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          longitude?: number | null
+          name: string
+          photos?: string[] | null
+          sector?: string | null
+          stage?: string | null
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string
+          website?: string | null
+          year_founded?: number | null
+        }
+        Update: {
+          claimed_by?: string | null
+          created_at?: string
+          description?: string | null
+          employee_count?: string | null
+          full_address?: string | null
+          hiring_status?: boolean
+          id?: string
+          is_claimed?: boolean
+          is_verified?: boolean
+          latitude?: number | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          longitude?: number | null
+          name?: string
+          photos?: string[] | null
+          sector?: string | null
+          stage?: string | null
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string
+          website?: string | null
+          year_founded?: number | null
+        }
+        Relationships: []
+      }
+      job_postings: {
+        Row: {
+          ai_imported: boolean
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          title: string
+          type: string | null
+          url: string | null
+        }
+        Insert: {
+          ai_imported?: boolean
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          title: string
+          type?: string | null
+          url?: string | null
+        }
+        Update: {
+          ai_imported?: boolean
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          title?: string
+          type?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_postings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      navigator_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          recommendations: Json | null
+          session_data: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recommendations?: Json | null
+          session_data?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recommendations?: Json | null
+          session_data?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          communities: string[] | null
+          created_at: string
+          description: string | null
+          email: string | null
+          external_id: string | null
+          id: string
+          industries: string[] | null
+          is_active: boolean
+          link: string | null
+          locations: string[] | null
+          title: string
+          topics: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          communities?: string[] | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          external_id?: string | null
+          id?: string
+          industries?: string[] | null
+          is_active?: boolean
+          link?: string | null
+          locations?: string[] | null
+          title: string
+          topics?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          communities?: string[] | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          external_id?: string | null
+          id?: string
+          industries?: string[] | null
+          is_active?: boolean
+          link?: string | null
+          locations?: string[] | null
+          title?: string
+          topics?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "founder" | "investor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +432,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "founder", "investor"],
+    },
   },
 } as const
