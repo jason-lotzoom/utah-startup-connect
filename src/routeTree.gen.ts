@@ -18,6 +18,7 @@ import { Route as MapIndexRouteImport } from './routes/map.index'
 import { Route as MapAddCompanyRouteImport } from './routes/map.add-company'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
+import { Route as NavigatorResourceIdRouteImport } from './routes/navigator.resource.$id'
 import { Route as MapCompanyIdRouteImport } from './routes/map.company.$id'
 import { Route as MapClaimIdRouteImport } from './routes/map.claim.$id'
 
@@ -66,6 +67,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NavigatorResourceIdRoute = NavigatorResourceIdRouteImport.update({
+  id: '/resource/$id',
+  path: '/resource/$id',
+  getParentRoute: () => NavigatorRoute,
+} as any)
 const MapCompanyIdRoute = MapCompanyIdRouteImport.update({
   id: '/company/$id',
   path: '/company/$id',
@@ -82,25 +88,27 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/map': typeof MapRouteWithChildren
-  '/navigator': typeof NavigatorRoute
+  '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
+  '/navigator/resource/$id': typeof NavigatorResourceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
-  '/navigator': typeof NavigatorRoute
+  '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
   '/map': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
+  '/navigator/resource/$id': typeof NavigatorResourceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -108,13 +116,14 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/map': typeof MapRouteWithChildren
-  '/navigator': typeof NavigatorRoute
+  '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
+  '/navigator/resource/$id': typeof NavigatorResourceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
+    | '/navigator/resource/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/map/claim/$id'
     | '/map/company/$id'
+    | '/navigator/resource/$id'
   id:
     | '__root__'
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
+    | '/navigator/resource/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,7 +174,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   MapRoute: typeof MapRouteWithChildren
-  NavigatorRoute: typeof NavigatorRoute
+  NavigatorRoute: typeof NavigatorRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
 }
@@ -232,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/navigator/resource/$id': {
+      id: '/navigator/resource/$id'
+      path: '/resource/$id'
+      fullPath: '/navigator/resource/$id'
+      preLoaderRoute: typeof NavigatorResourceIdRouteImport
+      parentRoute: typeof NavigatorRoute
+    }
     '/map/company/$id': {
       id: '/map/company/$id'
       path: '/company/$id'
@@ -265,15 +284,37 @@ const MapRouteChildren: MapRouteChildren = {
 
 const MapRouteWithChildren = MapRoute._addFileChildren(MapRouteChildren)
 
+interface NavigatorRouteChildren {
+  NavigatorResourceIdRoute: typeof NavigatorResourceIdRoute
+}
+
+const NavigatorRouteChildren: NavigatorRouteChildren = {
+  NavigatorResourceIdRoute: NavigatorResourceIdRoute,
+}
+
+const NavigatorRouteWithChildren = NavigatorRoute._addFileChildren(
+  NavigatorRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   MapRoute: MapRouteWithChildren,
-  NavigatorRoute: NavigatorRoute,
+  NavigatorRoute: NavigatorRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
