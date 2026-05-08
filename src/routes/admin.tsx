@@ -19,6 +19,8 @@ function AdminPage() {
   const nav = useNavigate();
   const [pending, setPending] = useState<any[]>([]);
   const [claims, setClaims] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRun, setLastRun] = useState<{ scanned: number; hiring: number; jobs_imported: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -65,11 +67,49 @@ function AdminPage() {
 
   if (!isAdmin) return null;
 
+  const runHiringRefresh = async (limit = 15) => {
+    setRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("refresh-hiring", { body: { limit } });
+      if (error) throw error;
+      setLastRun(data);
+      toast.success(`Scanned ${data.scanned} · ${data.hiring} hiring · ${data.jobs_imported} jobs`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "var(--font-body)" }}>
       <SiteNav />
       <div className="mx-auto max-w-6xl px-6 py-12">
         <h1 className="text-3xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Admin</h1>
+        <Card className="mt-6 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Hiring data refresh</h2>
+              <p className="text-sm text-muted-foreground">
+                Scrapes a batch of company career pages with Firecrawl and updates hiring status + open roles.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => runHiringRefresh(15)} disabled={refreshing}>
+                {refreshing ? "Scanning…" : "Refresh 15 companies"}
+              </Button>
+              <Button variant="outline" onClick={() => runHiringRefresh(40)} disabled={refreshing}>
+                Refresh 40
+              </Button>
+            </div>
+          </div>
+          {lastRun && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Last run: scanned {lastRun.scanned} · {lastRun.hiring} hiring · {lastRun.jobs_imported} jobs imported
+              {lastRun.errors.length > 0 && ` · ${lastRun.errors.length} errors`}
+            </p>
+          )}
+        </Card>
         <Tabs defaultValue="companies" className="mt-6">
           <TabsList>
             <TabsTrigger value="companies">Pending companies ({pending.length})</TabsTrigger>
