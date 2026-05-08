@@ -281,3 +281,20 @@ function Chip({
     </button>
   );
 }
+
+function FlyOnSelect({ target }: { target: any | null }) {
+  const { current: map } = useMap();
+  useEffect(() => {
+    if (!target || !map || !target.latitude || !target.longitude) return;
+    map.flyTo({
+      center: [Number(target.longitude), Number(target.latitude)],
+      zoom: 11,
+      pitch: 60,
+      bearing: -20,
+      speed: 1.2,
+      curve: 1.6,
+      essential: true,
+    });
+  }, [target, map]);
+  return null;
+}
