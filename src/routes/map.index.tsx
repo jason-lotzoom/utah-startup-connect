@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Briefcase, MapPin, Plus, Search } from "lucide-react";
+import Map, { Marker, Popup, NavigationControl } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 export const Route = createFileRoute("/map/")({
   component: MapPage,
@@ -46,6 +48,8 @@ function MapPage() {
   }, [companies, q, sector, stage, hiring]);
 
   const mapboxToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) || "";
+  const [popup, setPopup] = useState<any | null>(null);
+  const geo = filtered.filter((c) => c.latitude && c.longitude);
 
   return (
     <>
@@ -76,11 +80,53 @@ function MapPage() {
       {/* Map / Fallback */}
       <section className="border-b border-border">
         {mapboxToken ? (
-          <div className="h-[420px] w-full bg-muted">
-            {/* TODO: Mapbox rendering — token detected but renderer pending */}
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              Map rendering coming soon
-            </div>
+          <div className="h-[480px] w-full">
+            <Map
+              mapboxAccessToken={mapboxToken}
+              initialViewState={{ longitude: -111.8910, latitude: 40.7608, zoom: 6.2 }}
+              mapStyle="mapbox://styles/mapbox/dark-v11"
+              style={{ width: "100%", height: "100%" }}
+            >
+              <NavigationControl position="top-right" />
+              {geo.map((c) => (
+                <Marker
+                  key={c.id}
+                  longitude={Number(c.longitude)}
+                  latitude={Number(c.latitude)}
+                  onClick={(e) => {
+                    e.originalEvent.stopPropagation();
+                    setPopup(c);
+                  }}
+                >
+                  <div
+                    className="h-3 w-3 cursor-pointer rounded-full border-2 border-white shadow"
+                    style={{ background: c.hiring_status ? "var(--primary)" : "var(--accent)" }}
+                  />
+                </Marker>
+              ))}
+              {popup && popup.latitude && popup.longitude && (
+                <Popup
+                  longitude={Number(popup.longitude)}
+                  latitude={Number(popup.latitude)}
+                  anchor="bottom"
+                  onClose={() => setPopup(null)}
+                  closeButton
+                  closeOnClick={false}
+                >
+                  <div className="text-foreground">
+                    <p className="font-semibold">{popup.name}</p>
+                    {popup.sector && <p className="text-xs text-muted-foreground">{popup.sector}</p>}
+                    <Link
+                      to="/map/company/$id"
+                      params={{ id: popup.id }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View details →
+                    </Link>
+                  </div>
+                </Popup>
+              )}
+            </Map>
           </div>
         ) : (
           <div className="mx-auto max-w-7xl px-6 py-10">
