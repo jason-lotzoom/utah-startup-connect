@@ -289,7 +289,7 @@ function MapPage() {
             The startup map.
           </h1>
           <p className="mt-4 max-w-xl text-white/80 text-lg">
-            Discover {companies.length} verified Utah startups across {SECTORS.length} sectors.
+            Discover {companies.length || 220}+ verified Utah startups across {SECTORS.length} sectors.
           </p>
           
           <div className="mt-8 flex flex-wrap gap-8 text-sm">

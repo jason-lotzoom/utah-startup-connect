@@ -2,7 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Compass, Map, LayoutDashboard, Shield, ExternalLink, BarChart3, Briefcase, DollarSign } from "lucide-react";
+import { Compass, Map, LayoutDashboard, Shield, ExternalLink, BarChart3, DollarSign } from "lucide-react";
 
 export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
   const { user, isAdmin, signOut } = useAuth();
@@ -51,7 +51,6 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
           <NavLink to="/navigator" label="Navigator" active={pathname.startsWith("/navigator")} cls={linkCls} />
           <NavLink to="/map" label="Startup Map" active={pathname.startsWith("/map")} cls={linkCls} />
           <NavLink to="/events" label="Events" active={pathname.startsWith("/events")} cls={linkCls} />
-          <NavLink to="/jobs" label="Jobs" active={pathname.startsWith("/jobs")} cls={linkCls} />
           <NavLink to="/capital" label="Capital" active={pathname.startsWith("/capital")} cls={linkCls} />
           <NavLink to="/ecosystem" label="Ecosystem" active={pathname === "/ecosystem"} cls={linkCls} />
           {user && <NavLink to="/dashboard" label="Dashboard" active={pathname === "/dashboard"} cls={linkCls} />}
@@ -124,9 +123,6 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
             </Link>
             <Link to="/events" className="flex items-center gap-2 py-1" onClick={() => setMenuOpen(false)}>
               <BarChart3 className="h-4 w-4" /> Events
-            </Link>
-            <Link to="/jobs" className="flex items-center gap-2 py-1" onClick={() => setMenuOpen(false)}>
-              <Briefcase className="h-4 w-4" /> Jobs
             </Link>
             <Link to="/capital" className="flex items-center gap-2 py-1" onClick={() => setMenuOpen(false)}>
               <DollarSign className="h-4 w-4" /> Capital

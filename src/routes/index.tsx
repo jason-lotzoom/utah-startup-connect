@@ -476,6 +476,30 @@ function Index() {
             img="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop"
             search={{ stage: "Seed", industry: "Life Sciences", needs: "Compliance", location: "Utah County" }}
           />
+          <PersonaCard
+            name="Marcus"
+            role="Veteran Founder"
+            loc="Ogden"
+            needs="Defense & Capital"
+            img="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop"
+            search={{ stage: "Pre-seed", industry: "Manufacturing", needs: "Capital", location: "Weber County", community: "Veterans" }}
+          />
+          <PersonaCard
+            name="Priya"
+            role="B2B SaaS Founder"
+            loc="Lehi"
+            needs="Series A Capital"
+            img="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop"
+            search={{ stage: "Series A+", industry: "Tech / Software", needs: "Capital", location: "Utah County" }}
+          />
+          <PersonaCard
+            name="David"
+            role="Medical Device Founder"
+            loc="Salt Lake City"
+            needs="International Trade"
+            img="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop"
+            search={{ stage: "Seed", industry: "Life Sciences", needs: "International Trade", location: "Salt Lake County" }}
+          />
           </div>
         </div>
       </section>
