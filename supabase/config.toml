@@ -9,17 +9,5 @@ verify_jwt = false
 [functions.extract-jobs]
 verify_jwt = false
 
-[functions.scrape-events]
-verify_jwt = true
-
 [functions.refresh-hiring]
 verify_jwt = true
-
-[functions.get-mapbox-token]
-verify_jwt = false
-
-[functions.fetch-logos]
-verify_jwt = true
-
-[functions.concierge-chat]
-verify_jwt = false

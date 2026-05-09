@@ -6,10 +6,6 @@ import { SiteNav, SiteFooter } from "@/components/SiteNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/Avatar";
-import { AvatarCustomizer } from "@/components/AvatarCustomizer";
-import { BadgeShelf } from "@/components/BadgeShelf";
-import { Palette } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — 5iO" }] }),
@@ -21,8 +17,6 @@ function Dashboard() {
   const nav = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
-  const [showCustomizer, setShowCustomizer] = useState(false);
-  const [avatarVersion, setAvatarVersion] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth/login" });
@@ -44,35 +38,12 @@ function Dashboard() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "var(--font-body)" }}>
       <SiteNav />
       <div className="mx-auto max-w-5xl px-6 py-12">
-        <div className="flex items-center gap-5">
-          <Avatar key={avatarVersion} userId={user.id} size="large" />
-          <div>
-            <h1 className="text-3xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-              Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
-            <button
-              onClick={() => setShowCustomizer((v) => !v)}
-              className="mt-2 text-xs font-semibold text-primary hover:underline"
-            >
-              {showCustomizer ? "Hide customizer" : "Customize avatar"}
-            </button>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+          Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
 
-        {showCustomizer && (
-          <Card className="mt-6 rounded-3xl p-6">
-            <h2 className="mb-4 font-bold" style={{ fontFamily: "var(--font-display)" }}>Avatar</h2>
-            <AvatarCustomizer userId={user.id} onSaved={() => { setShowCustomizer(false); setAvatarVersion(v => v + 1); }} />
-          </Card>
-        )}
-
-        <div className="mt-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">Your badges</h2>
-          <BadgeShelf userId={user.id} />
-        </div>
-
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           <Card className="p-6">
             <h2 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>Your company</h2>
             {company ? (
@@ -106,18 +77,6 @@ function Dashboard() {
             </p>
             <Link to="/navigator">
               <Button size="sm" className="mt-4">Open Navigator</Button>
-            </Link>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-primary" />
-              <h2 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>Theme</h2>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Personalize your experience with Utah nature themes.
-            </p>
-            <Link to="/settings/theme">
-              <Button size="sm" variant="outline" className="mt-4">Customize theme</Button>
             </Link>
           </Card>
         </div>

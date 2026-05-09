@@ -2,29 +2,37 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteNav";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Search, X, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Sparkles, Compass, Map as MapIcon, BarChart3, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import HeroLiveMap, { SECTOR_LEGEND, type HeroLiveMapHandle } from "@/components/HeroLiveMap";
-import { awardBadge } from "@/lib/badges";
-import { supabase } from "@/integrations/supabase/client";
-import ConciergeAgent from "@/components/ConciergeAgent";
-import {
-  HomeNavigatorPreview,
-  HomeMapPreview,
-  HomeEventsPreview,
-  HomeJobsPreview,
-} from "@/components/home/HomeToolSections";
+import MapGL, { Marker, NavigationControl } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+function getLogoUrl(company: any): string | null {
+  if (company.website) {
+    try {
+      const domain = new URL(
+        company.website.startsWith("http") ? company.website : `https://${company.website}`
+      ).hostname;
+      return `https://logo.clearbit.com/${domain}`;
+    } catch { return null; }
+  }
+  return null;
+}
+function hashHue(str: string) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "5iO — Utah's Startup Ecosystem Platform" },
       { name: "description", content: "Find resources, explore startups, and navigate Utah's world-class entrepreneurial ecosystem." },
-      { property: "og:title", content: "5iO — Utah's Startup Ecosystem Platform" },
-      { property: "og:description", content: "Find resources, explore startups, and navigate Utah's world-class entrepreneurial ecosystem." },
     ],
   }),
   component: Index,
@@ -34,107 +42,16 @@ function Index() {
   const { user, isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [aiSearch, setAiSearch] = useState("");
-  const [trackedCount, setTrackedCount] = useState<number | null>(null);
-  const [companies, setCompanies] = useState<Array<{ id: string; name: string; sector: string | null }>>([]);
-  const [activeSectors, setActiveSectors] = useState<Set<string>>(new Set());
-  const [showSuggest, setShowSuggest] = useState(false);
-  const [heroStats, setHeroStats] = useState<{
-    companies: number;
-    resources: number;
-    sectors: number;
-    latest: { name: string; sector: string | null; id: string } | null;
-  }>({ companies: 0, resources: 0, sectors: 0, latest: null });
-  const flyToRef = useRef<HeroLiveMapHandle | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [mapCompanies, setMapCompanies] = useState<any[]>([]);
+  const mapboxToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) || "";
 
-  // Load real ecosystem counts + freshest company
   useEffect(() => {
-    let active = true;
-    Promise.all([
-      supabase.from("companies").select("id, name, sector", { count: "exact" }).eq("status", "active"),
-      supabase.from("resources").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabase
-        .from("companies")
-        .select("id, name, sector, created_at")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ]).then(([c, r, latest]) => {
-      if (!active) return;
-      const sectors = new Set((c.data ?? []).map((x: any) => x.sector).filter(Boolean));
-      setHeroStats({
-        companies: c.count ?? c.data?.length ?? 0,
-        resources: r.count ?? 0,
-        sectors: sectors.size,
-        latest: latest.data?.[0]
-          ? { id: latest.data[0].id, name: latest.data[0].name, sector: latest.data[0].sector }
-          : null,
-      });
-    });
-    return () => { active = false; };
+    supabase.from("companies").select("id,name,website,latitude,longitude,sector,hiring_status").eq("status","active").then(({ data }) => setMapCompanies(data ?? []));
   }, []);
 
-  const STATIC_SUGGESTIONS = [
-    "Find seed capital",
-    "Mentors in Lehi",
-    "Biotech grants",
-    "Hiring in Provo",
-    "Rural programs",
-    "Aerospace events",
-  ];
-
-  const sectorVar = (sector: string | null) => {
-    switch (sector) {
-      case "Tech": return "tech";
-      case "Life Sciences": return "life";
-      case "Aerospace": return "aero";
-      case "Energy": return "energy";
-      case "Outdoor": return "outdoor";
-      case "Manufacturing": return "mfg";
-      default: return "other";
-    }
-  };
-
-  const suggestions = useMemo(() => {
-    const q = aiSearch.trim().toLowerCase();
-    const companyHits = q
-      ? companies
-          .filter((c) => c.name.toLowerCase().includes(q))
-          .slice(0, 4)
-          .map((c) => ({ kind: "company" as const, id: c.id, label: c.name, sector: c.sector }))
-      : [];
-    const staticHits = (q
-      ? STATIC_SUGGESTIONS.filter((s) => s.toLowerCase().includes(q))
-      : STATIC_SUGGESTIONS
-    )
-      .slice(0, 6 - companyHits.length)
-      .map((s) => ({ kind: "query" as const, label: s }));
-    return [...companyHits, ...staticHits];
-  }, [aiSearch, companies]);
-
-  const toggleSector = (label: string) => {
-    setActiveSectors((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
-  };
-
-  const clearSearch = () => {
-    setAiSearch("");
-    searchInputRef.current?.focus();
-  };
+  const geoCompanies = mapCompanies.filter((c) => c.latitude && c.longitude);
 
   const handleAiSearch = () => {
-    if (user) awardBadge(user.id, "first_scout");
-    if (aiSearch.trim()) {
-      flyToRef.current?.flyToQuery(aiSearch);
-      setTimeout(() => {
-        window.location.href = `/navigator?q=${encodeURIComponent(aiSearch)}`;
-      }, 1200);
-      return;
-    }
     window.location.href = `/navigator?q=${encodeURIComponent(aiSearch)}`;
   };
 
@@ -142,8 +59,8 @@ function Index() {
     <div className="bg-background min-h-screen selection:bg-primary/20">
       {/* ─── Top Nav ──── */}
       <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-black/20 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-white shadow-lg shadow-primary/20">
               5
             </div>
@@ -151,15 +68,12 @@ function Index() {
               5iO Navigator
             </span>
           </div>
-          <div className="hidden items-center gap-6 text-xs font-semibold uppercase tracking-widest text-white/70 lg:flex shrink-0">
+          <div className="hidden items-center gap-8 text-xs font-semibold uppercase tracking-widest text-white/70 md:flex">
             <Link to="/navigator" className="transition hover:text-white/80">
               Navigator
             </Link>
             <Link to="/map" className="transition hover:text-white/80">
-              Map
-            </Link>
-            <Link to="/events" className="transition hover:text-white/80">
-              Events
+              Startup Map
             </Link>
             <Link to="/ecosystem" className="transition hover:text-white/80">
               Ecosystem
@@ -175,192 +89,116 @@ function Index() {
               </Link>
             )}
           </div>
-
-          {/* Header search — compact, with clear button + suggest dropdown */}
-          <div className="hidden md:block relative w-[320px] lg:w-[380px] ml-auto">
-            <div className="group relative flex w-full items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-xl focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/30">
-              <Search className="h-4 w-4 text-white/50 group-focus-within:text-primary" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Tell us about your startup…"
-                className="h-8 w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
-                value={aiSearch}
-                onChange={(e) => { setAiSearch(e.target.value); setShowSuggest(true); }}
-                onFocus={() => setShowSuggest(true)}
-                onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
-                onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
-              />
-              {aiSearch && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={clearSearch}
-                  aria-label="Clear search"
-                  className="text-white/50 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-              <Button
-                size="sm"
-                onClick={handleAiSearch}
-                className="h-7 rounded-full px-3 text-xs shadow-md shadow-primary/20"
-                disabled={!aiSearch.trim()}
-              >
-                Match
-              </Button>
-            </div>
-            {showSuggest && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl border border-foreground/10 bg-card/95 p-1.5 shadow-xl backdrop-blur-xl z-50">
-                {suggestions.map((s, i) => (
-                  s.kind === "company" ? (
-                    <Link
-                      key={`c-${s.id}`}
-                      to="/map/company/$id"
-                      params={{ id: s.id }}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground hover:bg-muted"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <span className="h-2 w-2 rounded-full" style={{ background: `var(--sector-${sectorVar(s.sector)})` }} />
-                      <span className="flex-1 truncate">{s.label}</span>
-                      <span className="text-[10px] uppercase tracking-widest text-foreground/40">Company</span>
-                    </Link>
-                  ) : (
-                    <button
-                      key={`q-${i}`}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setAiSearch(s.label);
-                        setShowSuggest(false);
-                        setTimeout(handleAiSearch, 0);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
-                    >
-                      <Search className="h-3.5 w-3.5 text-foreground/40" />
-                      <span className="flex-1 truncate">{s.label}</span>
-                    </button>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 md:ml-3">
+          <div className="flex items-center gap-4">
             {user ? (
               <Button size="sm" variant="outline" className="h-9 border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10" asChild>
                 <Link to="/dashboard">My Dashboard</Link>
               </Button>
             ) : (
               <Button size="sm" className="h-9 shadow-xl shadow-primary/20" asChild>
-                <Link to="/auth/signup">Get Started</Link>
+                <Link to="/auth">Get Started</Link>
               </Button>
             )}
-            <button className="lg:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
+            <button className="md:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
               <Compass className="h-6 w-6" />
             </button>
           </div>
         </div>
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="absolute top-full w-full bg-slate-900 border-b border-white/10 p-6 flex flex-col gap-4 text-white text-sm uppercase tracking-widest lg:hidden">
-            <div className="md:hidden flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-              <Search className="h-4 w-4 text-white/40" />
-              <input
-                type="text"
-                placeholder="Tell us about your startup…"
-                className="h-8 w-full bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none normal-case tracking-normal"
-                value={aiSearch}
-                onChange={(e) => setAiSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
-              />
-            </div>
+          <div className="absolute top-full w-full bg-slate-900 border-b border-white/10 p-6 flex flex-col gap-4 text-white text-sm uppercase tracking-widest md:hidden">
             <Link to="/navigator" onClick={() => setMenuOpen(false)}>Navigator</Link>
             <Link to="/map" onClick={() => setMenuOpen(false)}>Startup Map</Link>
-            <Link to="/events" onClick={() => setMenuOpen(false)}>Events</Link>
             <Link to="/ecosystem" onClick={() => setMenuOpen(false)}>Ecosystem</Link>
             {user && <Link to="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</Link>}
           </div>
         )}
       </nav>
 
-      {/* ─── Hero Section ──── */}
-      <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-background px-6 pt-20">
-        {/* Live cinematic map background */}
-        <div className="absolute inset-0 z-0">
-          <HeroLiveMap
-            onReady={(n) => setTrackedCount(n)}
-            flyToRef={flyToRef}
-            activeSectors={activeSectors.size > 0 ? activeSectors : null}
-            onCompaniesLoaded={(rows) => setCompanies(rows.map((r) => ({ id: r.id, name: r.name, sector: r.sector })))}
-            hideHotspotChip
-          />
-          {/* Creamy parchment tint to match the brand palette */}
-          <div className="hero-map-tint" />
-          {/* Soft fade only at top + bottom so map stays clean & centered */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-        </div>
+      {/* ─── Hero Section: Split Layout ──── */}
+      <section className="relative min-h-[92vh] overflow-hidden bg-slate-950 pt-20">
+        {/* Ambient glow */}
+        <div className="absolute -left-1/4 top-0 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px] animate-pulse pointer-events-none" />
 
-        {/* LIVE chip top-right */}
-        <div className="absolute top-20 right-6 z-20 hidden md:flex items-center gap-2 rounded-full border border-emerald-600/30 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 backdrop-blur-md shadow-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live · {trackedCount ?? "—"} startups tracked
-        </div>
+        <div className="mx-auto max-w-[1400px] grid lg:grid-cols-2 min-h-[80vh]">
+          {/* Left: Content */}
+          <div className="flex flex-col justify-center px-8 md:px-16 py-16 lg:py-0 relative z-10">
+            <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
+              <Sparkles className="h-3 w-3" />
+              Utah Startup Ecosystem
+            </div>
 
-        {/* Sector legend bottom-right — clickable filter */}
-        <div className="absolute bottom-6 right-6 z-20 hidden lg:flex flex-col gap-1 rounded-2xl border border-foreground/10 bg-white/80 px-3 py-2.5 backdrop-blur-md shadow-sm">
-          <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-foreground/50 mb-1">Filter by sector</p>
-          {SECTOR_LEGEND.map((s) => {
-            const active = activeSectors.size === 0 || activeSectors.has(s.label === "Life Sci" ? "Life Sciences" : s.label === "Mfg" ? "Manufacturing" : s.label);
-            const sectorKey = s.label === "Life Sci" ? "Life Sciences" : s.label === "Mfg" ? "Manufacturing" : s.label;
-            return (
-              <button
-                key={s.label}
-                type="button"
-                aria-pressed={activeSectors.has(sectorKey)}
-                onClick={() => toggleSector(sectorKey)}
-                className={`flex items-center gap-2 rounded-md px-1.5 py-1 text-[10px] transition hover:bg-foreground/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${active ? "text-foreground/80" : "text-foreground/30"}`}
+            <h1 className="text-5xl font-bold tracking-tight text-white md:text-7xl xl:text-8xl leading-[0.9]" style={{ fontFamily: "var(--font-display)" }}>
+              Navigate the<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-200">
+                Silicon Slopes.
+              </span>
+            </h1>
+
+            <p className="mt-8 max-w-lg text-lg text-white/50 leading-relaxed">
+              The definitive platform for Utah founders. Find capital, mentors, and community tailored to your stage and sector in 60 seconds.
+            </p>
+
+            {/* AI Search */}
+            <div className="mt-10 max-w-lg">
+              <div className="group relative rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-2xl transition-all focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
+                <div className="flex items-center gap-3 px-4">
+                  <Search className="h-5 w-5 text-white/40 group-focus-within:text-primary transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Tell us about your startup..."
+                    className="h-12 w-full bg-transparent text-white placeholder:text-white/30 focus:outline-none"
+                    value={aiSearch}
+                    onChange={(e) => setAiSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+                  />
+                  <Button onClick={handleAiSearch} className="h-10 rounded-2xl px-6 shadow-lg shadow-primary/20" disabled={!aiSearch.trim()}>
+                    Match Me
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest text-white/30">
+                <span>Try: "B2B SaaS in Provo"</span>
+                <span>"Rural manufacturing grants"</span>
+              </div>
+            </div>
+
+            {/* Trust logos */}
+            <div className="mt-12 border-t border-white/5 pt-8">
+              <div className="flex flex-wrap items-center gap-8 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition duration-500">
+                <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/50">Partners</span>
+                <img src="https://utahinnovationcenter.utah.gov/wp-content/uploads/2021/03/Governor_s_Office_of_Economic_Opportunity_Logo_White.png" alt="Utah GOEO" className="h-7" />
+                <img src="https://siliconslopes.com/content/images/2022/04/SS_Logo_White.png" alt="Silicon Slopes" className="h-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Map */}
+          <div className="relative lg:h-auto h-[400px]">
+            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-10 pointer-events-none hidden lg:block" />
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-950 to-transparent z-10 pointer-events-none" />
+            {mapboxToken ? (
+              <MapGL
+                mapboxAccessToken={mapboxToken}
+                initialViewState={{ longitude: -111.8910, latitude: 40.7608, zoom: 7 }}
+                mapStyle="mapbox://styles/mapbox/dark-v11"
+                style={{ width: "100%", height: "100%" }}
+                interactive={false}
               >
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: active ? s.color : "transparent", border: active ? "none" : `1.5px solid ${s.color}` }}
-                />
-                {s.label}
-              </button>
-            );
-          })}
-          {activeSectors.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setActiveSectors(new Set())}
-              className="mt-1 rounded-md px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:bg-primary/10"
-            >
-              Show all
-            </button>
-          )}
-        </div>
-
-        {/* SR-only h1 for SEO/a11y — hero is intentionally a clean live map */}
-        <h1 className="sr-only">Navigate the Silicon Slopes — Utah's startup ecosystem platform</h1>
-
-        {/* Ecosystem Stats Banner */}
-        <div className="relative z-10 mt-auto w-full max-w-7xl border-t border-foreground/10 pt-8 pb-4">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-6">
-            <HeroStat value={heroStats.companies} label="Active Companies" />
-            <HeroStat value={heroStats.resources} label="State Resources" />
-            <HeroStat value={heroStats.sectors} label="Sectors Covered" />
-            <NewThisWeek latest={heroStats.latest} />
+                {geoCompanies.map((c) => (
+                  <Marker key={c.id} longitude={Number(c.longitude)} latitude={Number(c.latitude)}>
+                    <HeroMapMarker company={c} />
+                  </Marker>
+                ))}
+              </MapGL>
+            ) : (
+              <div className="h-full w-full bg-slate-900/50 flex items-center justify-center">
+                <p className="text-white/20 text-sm">Map loading…</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
-
-      {/* ─── Inline tool previews ──── */}
-      <HomeNavigatorPreview />
-      <HomeMapPreview />
-      <HomeEventsPreview />
-      <HomeJobsPreview />
 
       {/* ─── How it Works ──── */}
       <section className="bg-slate-950 py-24">
@@ -428,30 +266,6 @@ function Index() {
             img="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop"
             search={{ stage: "Seed", industry: "Life Sciences", needs: "Compliance", location: "Utah County" }}
           />
-          <PersonaCard
-            name="Marcus"
-            role="Veteran Founder"
-            loc="Ogden"
-            needs="Defense & Capital"
-            img="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop"
-            search={{ stage: "Pre-seed", industry: "Manufacturing", needs: "Capital", location: "Weber County", community: "Veterans" }}
-          />
-          <PersonaCard
-            name="Priya"
-            role="B2B SaaS Founder"
-            loc="Lehi"
-            needs="Series A Capital"
-            img="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop"
-            search={{ stage: "Series A+", industry: "Tech / Software", needs: "Capital", location: "Utah County" }}
-          />
-          <PersonaCard
-            name="David"
-            role="Medical Device Founder"
-            loc="Salt Lake City"
-            needs="International Trade"
-            img="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop"
-            search={{ stage: "Seed", industry: "Life Sciences", needs: "International Trade", location: "Salt Lake County" }}
-          />
           </div>
         </div>
       </section>
@@ -501,7 +315,6 @@ function Index() {
       </section>
 
       <SiteFooter />
-      <ConciergeAgent />
     </div>
   );
 }
@@ -570,80 +383,21 @@ function StatBlock({ n, l }: { n: number; l: string }) {
   );
 }
 
-function HeroStat({ value, label }: { value: number; label: string }) {
-  const [count, setCount] = useState(0);
-
-  // Looping count-up: animates whenever the target value changes,
-  // and replays every ~9s so the hero feels alive.
-  useEffect(() => {
-    if (!value) return;
-    let raf = 0;
-    const run = () => {
-      const start = performance.now();
-      const duration = 1600;
-      const tick = (now: number) => {
-        const p = Math.min((now - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - p, 3);
-        setCount(Math.floor(eased * value));
-        if (p < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    };
-    run();
-    const loop = setInterval(() => {
-      setCount(0);
-      run();
-    }, 9000);
-    return () => { cancelAnimationFrame(raf); clearInterval(loop); };
-  }, [value]);
-
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div
-        className="text-4xl md:text-5xl font-normal text-foreground/90 leading-none tabular-nums"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        {count}
-        <span className="text-foreground/60">+</span>
-      </div>
-      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function NewThisWeek({
-  latest,
-}: {
-  latest: { id: string; name: string; sector: string | null } | null;
-}) {
-  if (!latest) {
+function HeroMapMarker({ company }: { company: any }) {
+  const logoUrl = getLogoUrl(company);
+  const [imgOk, setImgOk] = useState(true);
+  if (logoUrl && imgOk) {
     return (
-      <div className="flex flex-col items-center text-center">
-        <div className="text-4xl md:text-5xl font-normal text-foreground/40 leading-none" style={{ fontFamily: "var(--font-display)" }}>—</div>
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">New this week</p>
+      <div className="h-8 w-8 rounded-full border-2 border-white/70 bg-white shadow-lg shadow-black/40 overflow-hidden">
+        <img src={logoUrl} alt="" className="h-full w-full object-contain p-0.5" onError={() => setImgOk(false)} />
       </div>
     );
   }
+  const hue = hashHue(company.id || company.name);
   return (
-    <Link
-      to="/map/company/$id"
-      params={{ id: latest.id }}
-      className="group flex flex-col items-center text-center"
-    >
-      <div className="flex items-center gap-1.5 leading-none">
-        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-        <span
-          className="text-2xl md:text-3xl font-normal text-foreground/90 truncate max-w-[180px] group-hover:text-primary transition"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {latest.name}
-        </span>
-      </div>
-      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/80">
-        New this week
-      </p>
-    </Link>
+    <div className="h-7 w-7 rounded-full border-2 border-white/50 shadow-lg shadow-black/30 flex items-center justify-center text-[8px] font-bold text-white"
+      style={{ background: `hsl(${hue} 60% 45%)` }}>
+      {(company.name || "").charAt(0)}
+    </div>
   );
 }

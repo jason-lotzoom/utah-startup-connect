@@ -1,95 +1,73 @@
-## Goal
 
-Three things, all on the landing page (`/`):
+# Live hiring data on the Utah Startup Map
 
-1. **Fix the Get Started 404** — the button links to `/auth`, but only `/auth/login` and `/auth/signup` exist.
-2. **Add a live concierge agent** that helps founders list their business on the Navigator / Startup Map without leaving the home page.
-3. **Inline each tool** (Navigator, Map, Events, Jobs, Ecosystem) as its own interactive section on `/`, each with a small live preview + "View more →" CTA so users can explore everything without navigating away first.
+Four pieces, built in order so each one is verifiable on its own.
 
----
+## 1. Connect Firecrawl
 
-## 1. Fix Get Started → 404
+- Link the Firecrawl connector to this project (`standard_connectors--connect` with `connector_id: firecrawl`). This injects `FIRECRAWL_API_KEY` into the server runtime.
+- Verify with `fetch_secrets` that `FIRECRAWL_API_KEY` is present.
+- Quick sanity call from the sandbox to Firecrawl's `/v2/map` on a known URL (e.g. one of the company websites) to confirm the key works before wiring it into the edge function.
 
-`src/routes/index.tsx:250` uses `<Link to="/auth">`. Switch to `/auth/signup` (logged-out users) and keep "My Dashboard" for logged-in. Add a redirect route at `src/routes/auth.tsx` (renders `<Navigate to="/auth/login" />`) so any other stale `/auth` links also work.
+## 2. Edge function: `refresh-hiring`
 
----
+New Supabase Edge Function at `supabase/functions/refresh-hiring/index.ts`, server-only, uses the service-role client.
 
-## 2. Landing-page Concierge Agent ("List your business" assistant)
+What it does, per run:
+1. `select id, name, website from companies where status = 'active' and website is not null`.
+2. For each company, throttled to ~5 concurrent / ~1 req/sec:
+   - `firecrawl.map(website, { search: 'careers jobs hiring', limit: 10 })` to find the careers page.
+   - Pick the best candidate (URL contains `careers`, `jobs`, `join`, `work-with-us`, `hiring`). Fall back to the website root if nothing matches.
+   - `firecrawl.scrape(url, { formats: [{ type: 'json', schema: { is_hiring: boolean, jobs: [{ title, location?, type?, url? }] } }] })`.
+3. Writes:
+   - `update companies set hiring_status = <bool>, updated_at = now() where id = ...`
+   - `delete from job_postings where company_id = ... and ai_imported = true`
+   - `insert into job_postings (...) values (...)` with `ai_imported = true, is_active = true`.
+4. Returns `{ scanned, hiring, jobs_imported, errors, started_at, finished_at }`.
 
-A floating, always-available chat widget anchored bottom-right of `/` with a friendly opener:
+Trigger:
+- Manual button on `/admin` ("Refresh hiring data") that calls the function and shows the last-run summary.
+- (Optional, can defer) Daily `pg_cron` hitting a `/api/public/refresh-hiring` route guarded by a shared secret header — not in this first pass unless you want it now.
 
-> "Hi 👋 I'm 5iO Concierge. Want to list your startup on the Map, find resources in Navigator, or post a job? I'll guide you in 30 seconds."
+## 3. Realtime on `companies` and `job_postings`
 
-Behaviour:
-- Streaming chat (reuses the existing `navigator-chat` edge function pattern → new `concierge-chat` edge function with a system prompt focused on **listing flows**: Map company submission, Navigator resource intake, jobs, events).
-- Smart action buttons appear inline in the AI replies: **"List my company on the Map"**, **"Submit a resource"**, **"Post a job"**, **"Add an event"** — each links to the matching add/claim page (`/map/add-company`, etc.) or opens an embedded mini-form when the user is logged in.
-- Shows a "Sign in to continue" prompt with a link to `/auth/signup` if the user tries a write action while logged out.
-- Persists conversation in `sessionStorage` only (no DB writes for v1).
-- Collapsed by default as a pill button "Need help listing? Ask the Concierge"; expands into a 380×560 card.
-
-Component: `src/components/ConciergeAgent.tsx`. Mounted once in `src/routes/index.tsx`.
-
----
-
-## 3. Inline tool sections on `/` with live data + "View more"
-
-Replace the current "Three tools, deeply connected" cards with **functional sections**. Each pulls real Supabase data, renders the top 4–6 results, and links to the full page.
-
-### a) Navigator preview (`#navigator`)
-- Mini-quiz: 3 quick chips ("Pre-seed", "Software", "SLC area") → calls existing matching logic, shows top 3 matched resources as cards.
-- "View all 213 resources →" → `/navigator`.
-
-### b) Startup Map preview (`#map`)
-- Compact 320px-tall map with the existing `HeroLiveMap` (already on page) + sector filter chips + "Featured this week" carousel (latest 6 companies).
-- CTAs: **"Explore full map →"** (`/map`) and **"List your company →"** (`/map/add-company`).
-
-### c) Events preview (`#events`)
-- Pulls next 4 upcoming events from `events` table; each card → `/events`.
-- "View all events →" link.
-
-### d) Jobs preview (`#jobs`)
-- Top 6 jobs (uses existing `FALLBACK_JOBS` if DB empty). Filter chips by city.
-- "View all jobs →" → `/jobs`.
-
-### e) Ecosystem snapshot (`#ecosystem`)
-- 4 stat tiles (companies, capital raised, sectors, hubs) + 6 logo grid of top investors/accelerators.
-- "Explore ecosystem →" → `/ecosystem`.
-
-Each section uses `<section id="...">` so the existing nav links scroll-anchor when clicked. All "View more" CTAs preserve full-page navigation for SEO.
-
-### Layout pattern
-
-```text
-[ Hero map + search ]
-[ Concierge floating button ─────────────► ]
-[ § Navigator preview      → View all ]
-[ § Startup Map preview    → Explore | List company ]
-[ § Events preview         → View all ]
-[ § Jobs preview           → View all ]
-[ § Ecosystem snapshot     → Explore ]
-[ Personas / footer (existing) ]
+Migration:
+```sql
+alter publication supabase_realtime add table public.companies;
+alter publication supabase_realtime add table public.job_postings;
+alter table public.companies replica identity full;
+alter table public.job_postings replica identity full;
 ```
 
----
+Then in `src/routes/map.index.tsx`:
+- Subscribe to `postgres_changes` on `companies` (event `*`). On any change, patch the row in local state by `id` so the hero "Hiring now" stat, the marker color, and the card "Hiring" badge update without a refresh.
+- Same approach on the company detail page (`map.company.$id.tsx`) so a single open card live-updates while the function writes.
 
-## Technical notes
+## 4. Hiring data status line
 
-- New edge function `supabase/functions/concierge-chat/index.ts` (mirrors `navigator-chat`, different system prompt, no resource-list grounding required).
-- `ConciergeAgent.tsx` uses `react-markdown` for streaming responses (already in deps via Navigator).
-- Each section is its own small component (`HomeNavigatorSection.tsx`, `HomeMapSection.tsx`, `HomeEventsSection.tsx`, `HomeJobsSection.tsx`, `HomeEcosystemSection.tsx`) inside `src/components/home/` for clean separation.
-- All data fetched client-side with the public `supabase` client — no auth or RLS changes needed (existing tables are already readable).
-- `auth.tsx` redirect route prevents future `/auth` 404s.
+A small status strip directly under the hero stats on `/map`, e.g.:
 
-## Files touched
+```text
+Hiring data · updated 2 min ago · source: company careers pages via Firecrawl · [Refresh]
+```
 
-- **edit** `src/routes/index.tsx` — fix Get Started link, mount ConciergeAgent + 5 home sections.
-- **new** `src/routes/auth.tsx` — redirect to `/auth/login`.
-- **new** `src/components/ConciergeAgent.tsx`.
-- **new** `src/components/home/HomeNavigatorSection.tsx`, `HomeMapSection.tsx`, `HomeEventsSection.tsx`, `HomeJobsSection.tsx`, `HomeEcosystemSection.tsx`.
-- **new** `supabase/functions/concierge-chat/index.ts` (+ config entry if needed).
+- "Updated" timestamp = `max(updated_at)` from `companies` filtered to rows touched by the last refresh. Cheap query, cached client-side, refreshed by the same realtime subscription.
+- Status pill: `Idle` / `Refreshing…` / `Last run failed` based on the most recent run.
+- "Source" text is static: "Company careers pages via Firecrawl".
+- The `[Refresh]` button is admin-only (uses `has_role(auth.uid(), 'admin')`); for everyone else it's just the status text.
+- To track runs cleanly, add a tiny `hiring_refresh_runs` table:
+  - `id, started_at, finished_at, scanned, hiring, jobs_imported, error_count, status (running|success|failed)`
+  - RLS: public read, admin write. Edge function inserts a row at start, updates it at end.
 
-## Out of scope
+## Files
 
-- Persisting concierge chats to DB.
-- Voice agent (ElevenLabs) — can come later if you want a true voice concierge.
-- Redesigning the personas section (kept as-is).
+- NEW `supabase/functions/refresh-hiring/index.ts`
+- NEW migration: realtime on `companies` + `job_postings`, create `hiring_refresh_runs` table with RLS
+- EDIT `src/routes/map.index.tsx` — realtime subscription, status strip
+- EDIT `src/routes/map.company.$id.tsx` — realtime subscription for the open company
+- EDIT `src/routes/admin.tsx` — "Refresh hiring data" button + last 10 runs table
+- `supabase/config.toml` — add `[functions.refresh-hiring]` block (no `verify_jwt = false`; admin button calls it with the user's JWT; admin check enforced inside the function)
+
+## Open question
+
+Do you want the daily cron (option in step 2) included now, or just the admin "Refresh" button for the first pass? The button is enough to prove it works; cron can come right after.

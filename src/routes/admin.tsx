@@ -37,12 +37,6 @@ function AdminPage() {
   const nav = useNavigate();
   const [pending, setPending] = useState<any[]>([]);
   const [claims, setClaims] = useState<any[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastRun, setLastRun] = useState<{ scanned: number; hiring: number; jobs_imported: number; errors: string[] } | null>(null);
-  const [eventsRefreshing, setEventsRefreshing] = useState(false);
-  const [eventsLastRun, setEventsLastRun] = useState<{ scraped: number; inserted: number; updated: number; errors: string[] } | null>(null);
-  const [logosRefreshing, setLogosRefreshing] = useState(false);
-  const [logosLastRun, setLogosLastRun] = useState<{ processed: number; updated: number; skipped: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -89,48 +83,6 @@ function AdminPage() {
 
   if (!isAdmin) return null;
 
-  const runLogosRefresh = async (limit = 20) => {
-    setLogosRefreshing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('fetch-logos', { body: { limit } });
-      if (error) throw error;
-      setLogosLastRun(data);
-      toast.success(`Logos: ${data.updated} updated · ${data.skipped} skipped · ${data.processed} processed`);
-    } catch (e: any) {
-      toast.error(e.message ?? 'Logo fetch failed');
-    } finally {
-      setLogosRefreshing(false);
-    }
-  };
-
-  const runEventsRefresh = async () => {
-    setEventsRefreshing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("scrape-events");
-      if (error) throw error;
-      setEventsLastRun(data);
-      toast.success(`Scraped ${data.scraped} · ${data.inserted} new · ${data.updated} updated`);
-    } catch (e: any) {
-      toast.error(e.message ?? "Events refresh failed");
-    } finally {
-      setEventsRefreshing(false);
-    }
-  };
-
-  const runHiringRefresh = async (limit = 15) => {
-    setRefreshing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("refresh-hiring", { body: { limit } });
-      if (error) throw error;
-      setLastRun(data);
-      toast.success(`Scanned ${data.scanned} · ${data.hiring} hiring · ${data.jobs_imported} jobs`);
-    } catch (e: any) {
-      toast.error(e.message ?? "Refresh failed");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "var(--font-body)" }}>
       <SiteNav />
@@ -141,79 +93,6 @@ function AdminPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Manage companies, review claims, and import data.
         </p>
-        <Card className="mt-6 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Hiring data refresh</h2>
-              <p className="text-sm text-muted-foreground">
-                Scrapes a batch of company career pages with Firecrawl and updates hiring status + open roles.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => runHiringRefresh(15)} disabled={refreshing}>
-                {refreshing ? "Scanning…" : "Refresh 15 companies"}
-              </Button>
-              <Button variant="outline" onClick={() => runHiringRefresh(40)} disabled={refreshing}>
-                Refresh 40
-              </Button>
-            </div>
-          </div>
-          {lastRun && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Last run: scanned {lastRun.scanned} · {lastRun.hiring} hiring · {lastRun.jobs_imported} jobs imported
-              {lastRun.errors.length > 0 && ` · ${lastRun.errors.length} errors`}
-            </p>
-          )}
-        </Card>
-
-        <Card className="mt-4 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Company logos</h2>
-              <p className="text-sm text-muted-foreground">
-                Fetches logos for companies without one via Clearbit, with Firecrawl as fallback. Stores the URL in the DB.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => runLogosRefresh(20)} disabled={logosRefreshing}>
-                {logosRefreshing ? 'Fetching…' : 'Fetch 20 logos'}
-              </Button>
-              <Button variant="outline" onClick={() => runLogosRefresh(50)} disabled={logosRefreshing}>
-                Fetch 50
-              </Button>
-            </div>
-          </div>
-          {logosLastRun && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Last run: processed {logosLastRun.processed} · {logosLastRun.updated} updated · {logosLastRun.skipped} skipped
-              {logosLastRun.errors.length > 0 && ` · ${logosLastRun.errors.length} errors`}
-            </p>
-          )}
-        </Card>
-
-        <Card className="mt-4 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Events feed refresh</h2>
-              <p className="text-sm text-muted-foreground">
-                Scrapes Silicon Slopes, Eventbrite, Meetup, Utah Foundation, and SBA Utah for upcoming events.
-              </p>
-            </div>
-            <Button
-              onClick={runEventsRefresh}
-              disabled={eventsRefreshing}
-              className="bg-[oklch(0.58_0.16_148)] hover:bg-[oklch(0.52_0.14_148)] text-white"
-            >
-              {eventsRefreshing ? "Scraping…" : "Refresh Events"}
-            </Button>
-          </div>
-          {eventsLastRun && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Last run: scraped {eventsLastRun.scraped} · {eventsLastRun.inserted} new · {eventsLastRun.updated} updated
-              {eventsLastRun.errors.length > 0 && ` · ${eventsLastRun.errors.length} errors`}
-            </p>
-          )}
-        </Card>
         <Tabs defaultValue="import" className="mt-6">
           <TabsList>
             <TabsTrigger value="import" className="gap-1.5">
@@ -370,10 +249,10 @@ function CSVImporter({
         const name = (row as any)[nameField];
         // Check if already exists
         const { data: existing } = await ((supabase as any)
-          .from(table)
+          .from(table as any)
           .select("id")
-          .eq(nameField, name)
-          .maybeSingle());
+          .eq(nameField as any, name)
+          .maybeSingle() as any);
 
         if (existing) {
           if (mode === "update") {

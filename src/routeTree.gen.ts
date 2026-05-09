@@ -11,17 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NavigatorRouteImport } from './routes/navigator'
 import { Route as MapRouteImport } from './routes/map'
-import { Route as JobsRouteImport } from './routes/jobs'
-import { Route as EventsRouteImport } from './routes/events'
-import { Route as EcosystemRouteImport } from './routes/ecosystem'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as CapitalRouteImport } from './routes/capital'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MapIndexRouteImport } from './routes/map.index'
-import { Route as SettingsThemeRouteImport } from './routes/settings.theme'
-import { Route as NavigatorSnapshotRouteImport } from './routes/navigator.snapshot'
 import { Route as MapAddCompanyRouteImport } from './routes/map.add-company'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
@@ -39,34 +32,9 @@ const MapRoute = MapRouteImport.update({
   path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JobsRoute = JobsRouteImport.update({
-  id: '/jobs',
-  path: '/jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EventsRoute = EventsRouteImport.update({
-  id: '/events',
-  path: '/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EcosystemRoute = EcosystemRouteImport.update({
-  id: '/ecosystem',
-  path: '/ecosystem',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CapitalRoute = CapitalRouteImport.update({
-  id: '/capital',
-  path: '/capital',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -84,30 +52,20 @@ const MapIndexRoute = MapIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MapRoute,
 } as any)
-const SettingsThemeRoute = SettingsThemeRouteImport.update({
-  id: '/settings/theme',
-  path: '/settings/theme',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NavigatorSnapshotRoute = NavigatorSnapshotRouteImport.update({
-  id: '/snapshot',
-  path: '/snapshot',
-  getParentRoute: () => NavigatorRoute,
-} as any)
 const MapAddCompanyRoute = MapAddCompanyRouteImport.update({
   id: '/add-company',
   path: '/add-company',
   getParentRoute: () => MapRoute,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => AuthRoute,
+  id: '/auth/signup',
+  path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => AuthRoute,
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const NavigatorResourceIdRoute = NavigatorResourceIdRouteImport.update({
   id: '/resource/$id',
@@ -128,19 +86,12 @@ const MapClaimIdRoute = MapClaimIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRouteWithChildren
-  '/capital': typeof CapitalRoute
   '/dashboard': typeof DashboardRoute
-  '/ecosystem': typeof EcosystemRoute
-  '/events': typeof EventsRoute
-  '/jobs': typeof JobsRoute
   '/map': typeof MapRouteWithChildren
   '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
-  '/navigator/snapshot': typeof NavigatorSnapshotRoute
-  '/settings/theme': typeof SettingsThemeRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -149,18 +100,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRouteWithChildren
-  '/capital': typeof CapitalRoute
   '/dashboard': typeof DashboardRoute
-  '/ecosystem': typeof EcosystemRoute
-  '/events': typeof EventsRoute
-  '/jobs': typeof JobsRoute
   '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
-  '/navigator/snapshot': typeof NavigatorSnapshotRoute
-  '/settings/theme': typeof SettingsThemeRoute
   '/map': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -170,19 +114,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRouteWithChildren
-  '/capital': typeof CapitalRoute
   '/dashboard': typeof DashboardRoute
-  '/ecosystem': typeof EcosystemRoute
-  '/events': typeof EventsRoute
-  '/jobs': typeof JobsRoute
   '/map': typeof MapRouteWithChildren
   '/navigator': typeof NavigatorRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
-  '/navigator/snapshot': typeof NavigatorSnapshotRoute
-  '/settings/theme': typeof SettingsThemeRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -193,19 +130,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/auth'
-    | '/capital'
     | '/dashboard'
-    | '/ecosystem'
-    | '/events'
-    | '/jobs'
     | '/map'
     | '/navigator'
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
-    | '/navigator/snapshot'
-    | '/settings/theme'
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -214,18 +144,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
-    | '/auth'
-    | '/capital'
     | '/dashboard'
-    | '/ecosystem'
-    | '/events'
-    | '/jobs'
     | '/navigator'
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
-    | '/navigator/snapshot'
-    | '/settings/theme'
     | '/map'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -234,19 +157,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
-    | '/auth'
-    | '/capital'
     | '/dashboard'
-    | '/ecosystem'
-    | '/events'
-    | '/jobs'
     | '/map'
     | '/navigator'
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
-    | '/navigator/snapshot'
-    | '/settings/theme'
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -256,15 +172,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  AuthRoute: typeof AuthRouteWithChildren
-  CapitalRoute: typeof CapitalRoute
   DashboardRoute: typeof DashboardRoute
-  EcosystemRoute: typeof EcosystemRoute
-  EventsRoute: typeof EventsRoute
-  JobsRoute: typeof JobsRoute
   MapRoute: typeof MapRouteWithChildren
   NavigatorRoute: typeof NavigatorRouteWithChildren
-  SettingsThemeRoute: typeof SettingsThemeRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -283,46 +195,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/jobs': {
-      id: '/jobs'
-      path: '/jobs'
-      fullPath: '/jobs'
-      preLoaderRoute: typeof JobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/events': {
-      id: '/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof EventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ecosystem': {
-      id: '/ecosystem'
-      path: '/ecosystem'
-      fullPath: '/ecosystem'
-      preLoaderRoute: typeof EcosystemRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/capital': {
-      id: '/capital'
-      path: '/capital'
-      fullPath: '/capital'
-      preLoaderRoute: typeof CapitalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -346,20 +223,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapIndexRouteImport
       parentRoute: typeof MapRoute
     }
-    '/settings/theme': {
-      id: '/settings/theme'
-      path: '/settings/theme'
-      fullPath: '/settings/theme'
-      preLoaderRoute: typeof SettingsThemeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/navigator/snapshot': {
-      id: '/navigator/snapshot'
-      path: '/snapshot'
-      fullPath: '/navigator/snapshot'
-      preLoaderRoute: typeof NavigatorSnapshotRouteImport
-      parentRoute: typeof NavigatorRoute
-    }
     '/map/add-company': {
       id: '/map/add-company'
       path: '/add-company'
@@ -369,17 +232,17 @@ declare module '@tanstack/react-router' {
     }
     '/auth/signup': {
       id: '/auth/signup'
-      path: '/signup'
+      path: '/auth/signup'
       fullPath: '/auth/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
       id: '/auth/login'
-      path: '/login'
+      path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/navigator/resource/$id': {
       id: '/navigator/resource/$id'
@@ -405,18 +268,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthRouteChildren {
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthSignupRoute: typeof AuthSignupRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthLoginRoute: AuthLoginRoute,
-  AuthSignupRoute: AuthSignupRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
 interface MapRouteChildren {
   MapAddCompanyRoute: typeof MapAddCompanyRoute
   MapIndexRoute: typeof MapIndexRoute
@@ -434,12 +285,10 @@ const MapRouteChildren: MapRouteChildren = {
 const MapRouteWithChildren = MapRoute._addFileChildren(MapRouteChildren)
 
 interface NavigatorRouteChildren {
-  NavigatorSnapshotRoute: typeof NavigatorSnapshotRoute
   NavigatorResourceIdRoute: typeof NavigatorResourceIdRoute
 }
 
 const NavigatorRouteChildren: NavigatorRouteChildren = {
-  NavigatorSnapshotRoute: NavigatorSnapshotRoute,
   NavigatorResourceIdRoute: NavigatorResourceIdRoute,
 }
 
@@ -450,15 +299,11 @@ const NavigatorRouteWithChildren = NavigatorRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  AuthRoute: AuthRouteWithChildren,
-  CapitalRoute: CapitalRoute,
   DashboardRoute: DashboardRoute,
-  EcosystemRoute: EcosystemRoute,
-  EventsRoute: EventsRoute,
-  JobsRoute: JobsRoute,
   MapRoute: MapRouteWithChildren,
   NavigatorRoute: NavigatorRouteWithChildren,
-  SettingsThemeRoute: SettingsThemeRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

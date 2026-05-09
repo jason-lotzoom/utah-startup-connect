@@ -8,20 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Plus, X, Building2, Briefcase, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Building2, Sparkles, Loader2, ExternalLink, AlertTriangle, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/map/add-company")({
-  head: () => ({ meta: [{ title: "Submit a company â 5iO" }] }),
+  head: () => ({ meta: [{ title: "Submit a company — 5iO" }] }),
   component: AddCompany,
 });
-
-interface JobEntry {
-  title: string;
-  type: string;
-  location: string;
-  url: string;
-}
 
 function AddCompany() {
   const nav = useNavigate();
@@ -39,10 +32,18 @@ function AddCompany() {
     linkedin_url: "",
     photo_urls: [""] as string[],
   });
-  const [jobs, setJobs] = useState<JobEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  type FieldMeta = { confidence: number; evidence: string | null; source_url: string | null };
+  const [meta, setMeta] = useState<Partial<Record<keyof typeof form, FieldMeta>>>({});
+  const [citations, setCitations] = useState<{
+    primary_url?: string;
+    page_title?: string | null;
+    search_results?: Array<{ url: string; title?: string; description?: string }>;
+    scraped_excerpt?: string | null;
+  } | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
 
   const runAutofill = async () => {
     if (!aiInput.trim()) return toast.error("Enter a company name or website");
@@ -53,21 +54,37 @@ function AddCompany() {
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Autofill failed");
-      const d = data.data;
-      setForm((f) => ({
-        ...f,
-        name: d.name || f.name,
-        website: d.website || f.website,
-        description: d.description || f.description,
-        sector: d.sector || f.sector,
-        stage: d.stage || f.stage,
-        full_address: d.full_address || f.full_address,
-        year_founded: d.year_founded ? String(d.year_founded) : f.year_founded,
-        employee_count: d.employee_count || f.employee_count,
-        linkedin_url: d.linkedin_url || f.linkedin_url,
-        hiring_status: d.hiring_status ?? f.hiring_status,
+      const f = data.fields as Record<string, { value: unknown; confidence: number; evidence: string | null; source_url: string | null } | null>;
+      const get = <T,>(k: string, fallback: T): T => (f?.[k]?.value ?? fallback) as T;
+
+      setForm((prev) => ({
+        ...prev,
+        name: get("name", prev.name),
+        website: get("website", prev.website),
+        description: get("description", prev.description),
+        sector: get("sector", prev.sector),
+        stage: get("stage", prev.stage),
+        full_address: get("full_address", prev.full_address),
+        year_founded: f?.year_founded?.value ? String(f.year_founded.value) : prev.year_founded,
+        employee_count: get("employee_count", prev.employee_count),
+        linkedin_url: get("linkedin_url", prev.linkedin_url),
+        hiring_status: get<boolean>("hiring_status", prev.hiring_status),
       }));
-      toast.success("Fields prefilled - please review before submitting");
+
+      const newMeta: typeof meta = {};
+      for (const k of Object.keys(f || {}) as Array<keyof typeof form>) {
+        const v = f?.[k as string];
+        if (v) newMeta[k] = { confidence: v.confidence ?? 0.5, evidence: v.evidence ?? null, source_url: v.source_url ?? null };
+      }
+      setMeta(newMeta);
+      setCitations(data.citations ?? null);
+
+      const lowConf = Object.entries(newMeta).filter(([, m]) => (m as FieldMeta).confidence < 0.6).length;
+      toast.success(
+        lowConf > 0
+          ? `Prefilled — ${lowConf} field${lowConf > 1 ? "s" : ""} need review`
+          : "Prefilled — please review before submitting"
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Autofill failed");
     } finally {
@@ -79,6 +96,7 @@ function AddCompany() {
     e.preventDefault();
     setLoading(true);
 
+    // Filter out empty photo URLs
     const photos = form.photo_urls.filter((u) => u.trim().length > 0);
 
     const { data, error } = await supabase
@@ -92,7 +110,7 @@ function AddCompany() {
         full_address: form.full_address || null,
         year_founded: form.year_founded ? Number(form.year_founded) : null,
         employee_count: form.employee_count,
-        hiring_status: form.hiring_status || jobs.length > 0,
+        hiring_status: form.hiring_status,
         linkedin_url: form.linkedin_url || null,
         photos: photos.length > 0 ? photos : null,
         status: "pending",
@@ -100,32 +118,8 @@ function AddCompany() {
       })
       .select()
       .single();
-
-    if (error) {
-      setLoading(false);
-      return toast.error(error.message);
-    }
-
-    // Insert job postings if any
-    const validJobs = jobs.filter((j) => j.title.trim());
-    if (validJobs.length > 0 && data?.id) {
-      const { error: jobsError } = await supabase.from("job_postings").insert(
-        validJobs.map((j) => ({
-          company_id: data.id,
-          title: j.title.trim(),
-          type: j.type || null,
-          location: j.location || null,
-          url: j.url || null,
-          is_active: true,
-          ai_imported: false,
-        }))
-      );
-      if (jobsError) {
-        console.warn("Jobs insert error:", jobsError.message);
-      }
-    }
-
     setLoading(false);
+    if (error) return toast.error(error.message);
     toast.success("Submitted! We'll review it shortly.");
     nav({ to: "/map/company/$id", params: { id: data.id } });
   };
@@ -136,26 +130,16 @@ function AddCompany() {
   };
 
   const removePhotoField = (idx: number) => {
-    setForm({ ...form, photo_urls: form.photo_urls.filter((_, i) => i !== idx) });
+    setForm({
+      ...form,
+      photo_urls: form.photo_urls.filter((_, i) => i !== idx),
+    });
   };
 
   const updatePhoto = (idx: number, val: string) => {
     const updated = [...form.photo_urls];
     updated[idx] = val;
     setForm({ ...form, photo_urls: updated });
-  };
-
-  const addJob = () => {
-    if (jobs.length >= 10) return;
-    setJobs([...jobs, { title: "", type: "Full-time", location: "", url: "" }]);
-  };
-
-  const removeJob = (idx: number) => setJobs(jobs.filter((_, i) => i !== idx));
-
-  const updateJob = (idx: number, field: keyof JobEntry, val: string) => {
-    const updated = [...jobs];
-    updated[idx] = { ...updated[idx], [field]: val };
-    setJobs(updated);
   };
 
   return (
@@ -183,13 +167,13 @@ function AddCompany() {
 
       <Card className="mt-8 p-6">
         <form onSubmit={submit} className="space-y-5">
-          {/* âââ Basic Info ââââ */}
+          {/* ─── AI Autofill ──── */}
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
               <Sparkles className="h-3.5 w-3.5" /> AI Autofill
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Enter your website or company name and we'll research the rest. Review and edit before submitting.
+              Enter your website or company name. We'll research and prefill, with sources and confidence scores so you can verify each value.
             </p>
             <div className="mt-3 flex gap-2">
               <Input
@@ -211,11 +195,53 @@ function AddCompany() {
                 )}
               </Button>
             </div>
+
+            {citations && (
+              <div className="mt-3 space-y-2 border-t border-primary/20 pt-3 text-xs">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-widest">Primary source:</span>
+                  <a href={citations.primary_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline truncate max-w-[60%]">
+                    {citations.page_title || citations.primary_url} <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                {citations.search_results && citations.search_results.length > 0 && (
+                  <div>
+                    <div className="text-muted-foreground font-semibold uppercase tracking-widest mb-1">Search results considered:</div>
+                    <ul className="space-y-1">
+                      {citations.search_results.map((r) => (
+                        <li key={r.url}>
+                          <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                            {r.title || r.url} <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {citations.scraped_excerpt && (
+                  <button type="button" onClick={() => setShowRaw((s) => !s)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                    <ChevronDown className={`h-3 w-3 transition ${showRaw ? "rotate-180" : ""}`} />
+                    {showRaw ? "Hide" : "Show"} raw scraped excerpt
+                  </button>
+                )}
+                {showRaw && citations.scraped_excerpt && (
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-background/60 p-2 text-[11px] text-muted-foreground">
+                    {citations.scraped_excerpt}
+                  </pre>
+                )}
+              </div>
+            )}
           </div>
 
-          <SectionLabel>Basic Information</SectionLabel>
+          {/* ─── Basic Info ──── */}
+          <div
+            className="text-xs font-semibold uppercase tracking-widest text-primary"
+            style={{ fontFamily: "var(--font-accent)" }}
+          >
+            Basic Information
+          </div>
 
-          <Field label="Company name" required>
+          <Field label="Company name" required meta={meta.name}>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -225,7 +251,7 @@ function AddCompany() {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Website">
+            <Field label="Website" meta={meta.website}>
               <Input
                 type="url"
                 placeholder="https://example.com"
@@ -233,7 +259,7 @@ function AddCompany() {
                 onChange={(e) => setForm({ ...form, website: e.target.value })}
               />
             </Field>
-            <Field label="LinkedIn">
+            <Field label="LinkedIn" meta={meta.linkedin_url}>
               <Input
                 type="url"
                 placeholder="https://linkedin.com/company/..."
@@ -243,7 +269,7 @@ function AddCompany() {
             </Field>
           </div>
 
-          <Field label="One-line description">
+          <Field label="One-line description" meta={meta.description}>
             <Textarea
               rows={3}
               placeholder="What does your company do?"
@@ -252,11 +278,16 @@ function AddCompany() {
             />
           </Field>
 
-          {/* âââ Company Details ââââ */}
-          <SectionLabel>Company Details</SectionLabel>
+          {/* ─── Company Details ──── */}
+          <div
+            className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary"
+            style={{ fontFamily: "var(--font-accent)" }}
+          >
+            Company Details
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Sector">
+            <Field label="Sector" meta={meta.sector}>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.sector}
@@ -267,7 +298,7 @@ function AddCompany() {
                 ))}
               </select>
             </Field>
-            <Field label="Stage">
+            <Field label="Stage" meta={meta.stage}>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.stage}
@@ -281,26 +312,24 @@ function AddCompany() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="City, State">
+            <Field label="City, State" meta={meta.full_address}>
               <Input
                 placeholder="Salt Lake City, UT"
                 value={form.full_address}
                 onChange={(e) => setForm({ ...form, full_address: e.target.value })}
               />
             </Field>
-            <Field label="Year founded">
+            <Field label="Year founded" meta={meta.year_founded}>
               <Input
                 type="number"
                 placeholder="2024"
-                min="1900"
-                max={new Date().getFullYear()}
                 value={form.year_founded}
                 onChange={(e) => setForm({ ...form, year_founded: e.target.value })}
               />
             </Field>
           </div>
 
-          <Field label="Team size">
+          <Field label="Team size" meta={meta.employee_count}>
             <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={form.employee_count}
@@ -322,76 +351,14 @@ function AddCompany() {
             Currently hiring
           </label>
 
-          {/* âââ Job Postings ââââ */}
-          <SectionLabel>Job Postings</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-2">
-            List open roles at your company. Adding jobs automatically marks you as hiring.
-          </p>
-
-          {jobs.length > 0 && (
-            <div className="space-y-4">
-              {jobs.map((job, idx) => (
-                <div key={idx} className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      <Briefcase className="h-3.5 w-3.5" /> Role {idx + 1}
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeJob(idx)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Job title" required>
-                      <Input
-                        placeholder="e.g. Senior Engineer"
-                        value={job.title}
-                        onChange={(e) => updateJob(idx, "title", e.target.value)}
-                        required={idx === 0}
-                      />
-                    </Field>
-                    <Field label="Type">
-                      <select
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={job.type}
-                        onChange={(e) => updateJob(idx, "type", e.target.value)}
-                      >
-                        {["Full-time", "Part-time", "Contract", "Remote", "Internship"].map((t) => (
-                          <option key={t}>{t}</option>
-                        ))}
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Location">
-                      <Input
-                        placeholder="Salt Lake City, UT"
-                        value={job.location}
-                        onChange={(e) => updateJob(idx, "location", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Apply URL">
-                      <Input
-                        type="url"
-                        placeholder="https://..."
-                        value={job.url}
-                        onChange={(e) => updateJob(idx, "url", e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {jobs.length < 10 && (
-            <Button type="button" variant="outline" size="sm" onClick={addJob} className="rounded-xl">
-              <Plus className="mr-1.5 h-3.5 w-3.5" /> Add a job posting
-            </Button>
-          )}
-
-          {/* âââ Photo Gallery ââââ */}
-          <SectionLabel>Photo Gallery</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-2">
+          {/* ─── Photo Gallery ──── */}
+          <div
+            className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary"
+            style={{ fontFamily: "var(--font-accent)" }}
+          >
+            Photo Gallery
+          </div>
+          <p className="text-xs text-muted-foreground">
             Add up to 6 image URLs showcasing your team, office, or product.
           </p>
 
@@ -423,16 +390,8 @@ function AddCompany() {
             )}
           </div>
 
-          {/* âââ Verification Note ââââ */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-            <p className="font-semibold">Instant verification available</p>
-            <p className="mt-1 text-xs text-emerald-700">
-              After submission, claim your listing at <span className="font-mono">/map/claim/[id]</span>. If your work email domain matches your company website, you'll be auto-verified instantly and can edit your listing immediately.
-            </p>
-          </div>
-
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Submittingâ¦" : "Submit company"}
+            {loading ? "Submitting…" : "Submit company"}
           </Button>
         </form>
       </Card>
@@ -440,24 +399,61 @@ function AddCompany() {
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary"
-      style={{ fontFamily: "var(--font-accent)" }}
-    >
-      {children}
-    </div>
-  );
-}
+type FieldMeta = { confidence: number; evidence: string | null; source_url: string | null };
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+  meta,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  meta?: FieldMeta;
+}) {
+  const low = meta && meta.confidence < 0.6;
+  const confPct = meta ? Math.round(meta.confidence * 100) : null;
+  const confColor =
+    !meta ? "" :
+    meta.confidence >= 0.8 ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+    meta.confidence >= 0.6 ? "bg-sky-100 text-sky-700 border-sky-200" :
+    meta.confidence >= 0.4 ? "bg-amber-100 text-amber-800 border-amber-200" :
+    "bg-rose-100 text-rose-700 border-rose-200";
+
   return (
-    <div className="space-y-1.5">
-      <Label>
-        {label} {required && <span className="text-primary">*</span>}
-      </Label>
+    <div className={`space-y-1.5 ${low ? "rounded-md ring-2 ring-amber-300/60 bg-amber-50/40 p-2 -m-2" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <Label>
+          {label} {required && <span className="text-primary">*</span>}
+        </Label>
+        {meta && (
+          <div className="flex items-center gap-1.5">
+            {low && <AlertTriangle className="h-3 w-3 text-amber-600" aria-label="Low confidence" />}
+            <span
+              className={`inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-semibold ${confColor}`}
+              title={meta.evidence ? `Evidence: "${meta.evidence}"` : "AI confidence"}
+            >
+              AI {confPct}%
+            </span>
+            {meta.source_url && (
+              <a
+                href={meta.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary"
+                title={`Source: ${meta.source_url}`}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
       {children}
+      {meta?.evidence && (
+        <p className="text-[11px] italic text-muted-foreground line-clamp-2">"{meta.evidence}"</p>
+      )}
     </div>
   );
 }

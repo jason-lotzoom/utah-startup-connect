@@ -17,36 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Share2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/map/company/$id")({
-  loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("companies")
-      .select("name,description,sector,logo_url")
-      .eq("id", params.id)
-      .maybeSingle();
-    return { meta: data };
-  },
-  head: ({ loaderData }) => {
-    const c = loaderData?.meta;
-    const title = c ? `${c.name} — Utah Startup Map` : "Company — Utah Startup Map";
-    const desc =
-      c?.description?.slice(0, 160) ||
-      `${c?.name ?? "Utah startup"} on the Utah Startup Map.`;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: desc },
-        { property: "og:title", content: title },
-        { property: "og:description", content: desc },
-        ...(c?.logo_url ? [{ property: "og:image", content: c.logo_url }] : []),
-      ],
-    };
-  },
   component: CompanyPage,
 });
 
@@ -153,22 +127,6 @@ function CompanyPage() {
               <Button>Claim this listing</Button>
             </Link>
           )}
-          <Button
-            variant="outline"
-            onClick={async () => {
-              const url = typeof window !== "undefined" ? window.location.href : "";
-              const shareData = { title: company.name, text: company.description ?? "", url };
-              try {
-                if (navigator.share) await navigator.share(shareData);
-                else {
-                  await navigator.clipboard.writeText(url);
-                  toast.success("Link copied");
-                }
-              } catch {}
-            }}
-          >
-            <Share2 className="mr-2 h-4 w-4" /> Share
-          </Button>
         </div>
       </div>
 
