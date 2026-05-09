@@ -110,6 +110,41 @@ export function HomeMapPreview() {
 }
 
 /* ─────── Events preview ─────── */
+const FALLBACK_EVENTS = [
+  {
+    id: "fe1",
+    title: "Silicon Slopes Summit",
+    start_date: "2026-09-24T17:00:00Z",
+    location_name: "Salt Palace Convention Center, SLC",
+    organizer: "Silicon Slopes",
+    url: "https://siliconslopes.com/summit",
+  },
+  {
+    id: "fe2",
+    title: "Founder Friday — Lehi",
+    start_date: "2026-05-15T22:00:00Z",
+    location_name: "Lehi, UT",
+    organizer: "Kiln",
+    url: "https://kiln.co/events",
+  },
+  {
+    id: "fe3",
+    title: "Utah Demo Day",
+    start_date: "2026-06-12T23:00:00Z",
+    location_name: "Park City, UT",
+    organizer: "Park City Angels",
+    url: "https://parkcityangels.com",
+  },
+  {
+    id: "fe4",
+    title: "Women Tech Council Pitch Night",
+    start_date: "2026-05-29T01:00:00Z",
+    location_name: "Sandy, UT",
+    organizer: "Women Tech Council",
+    url: "https://womentechcouncil.com",
+  },
+];
+
 export function HomeEventsPreview() {
   const [events, setEvents] = useState<any[]>([]);
   useEffect(() => {
@@ -120,7 +155,7 @@ export function HomeEventsPreview() {
       .gte("start_date", new Date().toISOString())
       .order("start_date", { ascending: true })
       .limit(4)
-      .then(({ data }) => setEvents(data ?? []));
+      .then(({ data }) => setEvents(data && data.length > 0 ? data : FALLBACK_EVENTS));
   }, []);
   return (
     <section id="events" className="bg-background py-20 px-6">
@@ -131,12 +166,7 @@ export function HomeEventsPreview() {
           subtitle="Stay close to Utah's founders, mentors, and investors — IRL."
           cta={{ to: "/events", label: "Browse all events" }}
         />
-        {events.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-muted-foreground">
-            No upcoming events listed yet. <Link to="/events" className="text-primary underline">Check the events page</Link>.
-          </p>
-        ) : (
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {events.map((e) => (
               <a
                 key={e.id}
@@ -158,8 +188,7 @@ export function HomeEventsPreview() {
                 {e.organizer && <p className="mt-2 text-xs text-muted-foreground">by {e.organizer}</p>}
               </a>
             ))}
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );
@@ -180,24 +209,29 @@ export function HomeJobsPreview() {
   useEffect(() => {
     supabase
       .from("job_postings")
-      .select("id, title, location, url, companies(name, sector)")
+      .select("id, title, location, url, company_id")
       .eq("is_active", true)
       .limit(6)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setJobs(
-            data.map((j: any) => ({
-              id: j.id,
-              title: j.title,
-              location: j.location,
-              url: j.url,
-              company: j.companies?.name ?? "Utah Startup",
-              sector: j.companies?.sector,
-            }))
-          );
-        } else {
+      .then(async ({ data }) => {
+        if (!data || data.length === 0) {
           setJobs(FALLBACK_JOBS);
+          return;
         }
+        const ids = Array.from(new Set(data.map((j: any) => j.company_id).filter(Boolean)));
+        const { data: comps } = ids.length
+          ? await supabase.from("companies").select("id, name, sector").in("id", ids)
+          : { data: [] as any[] };
+        const map = new Map((comps ?? []).map((c: any) => [c.id, c]));
+        setJobs(
+          data.map((j: any) => ({
+            id: j.id,
+            title: j.title,
+            location: j.location,
+            url: j.url,
+            company: map.get(j.company_id)?.name ?? "Utah Startup",
+            sector: map.get(j.company_id)?.sector,
+          }))
+        );
       });
   }, []);
   return (
