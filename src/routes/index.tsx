@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteNav";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Sparkles } from "lucide-react";
+import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import HeroLiveMap, { SECTOR_LEGEND, type HeroLiveMapHandle } from "@/components/HeroLiveMap";
-import { awardBadge } from "@/lib/badges";
 import { supabase } from "@/integrations/supabase/client";
 import ConciergeAgent from "@/components/ConciergeAgent";
 import {
@@ -449,37 +448,3 @@ function HeroStat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function NewThisWeek({
-  latest,
-}: {
-  latest: { id: string; name: string; sector: string | null } | null;
-}) {
-  if (!latest) {
-    return (
-      <div className="flex flex-col items-center text-center">
-        <div className="text-4xl md:text-5xl font-normal text-foreground/40 leading-none" style={{ fontFamily: "var(--font-display)" }}>—</div>
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">New this week</p>
-      </div>
-    );
-  }
-  return (
-    <Link
-      to="/map/company/$id"
-      params={{ id: latest.id }}
-      className="group flex flex-col items-center text-center"
-    >
-      <div className="flex items-center gap-1.5 leading-none">
-        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-        <span
-          className="text-2xl md:text-3xl font-normal text-foreground/90 truncate max-w-[180px] group-hover:text-primary transition"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {latest.name}
-        </span>
-      </div>
-      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/80">
-        New this week
-      </p>
-    </Link>
-  );
-}
