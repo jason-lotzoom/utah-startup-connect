@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Startup.Utah.gov 5.io Navigator",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArZO8eAK7pppiOXLZ4liYzrZ0LmbWduLHt6QsUpHJd3ar3SMxxrvWA4ib+YhH4IY9ke1mLbNi8TCda87GtQWSi24yGwvfLQ17gvKnd2DieVhoKbmu3OpJmEuH81TLLXqSlgd0+8SvkefucMV+Gk2rYhDgMwIVmIsXhZwcrkxzl/SoSnoUQeImTlArudf/CXOMUKsua5SZ1WE663/lskugT5n35jzbshrnM8g5D6Sb3IGyw0HqTiUP8mHSurUUVNidiyc7VXfngFTqKlKtwTMRDBrz6XedFje8URYN1PvZvRkW4b4QiETp2fEYOrh50IDwYgMktWfFeh6x3SOL5uwBZwIDAQAB",
+  "oauth2": {
+    "client_id": "210851808389-km9387h3me7tc2c4q7ot1flfe5kgefms.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/drive.readonly"
+    ]
+  }
+}
