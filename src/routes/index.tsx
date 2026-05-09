@@ -600,7 +600,6 @@ function HeroStat({ value, label }: { value: number; label: string }) {
   // and replays every ~9s so the hero feels alive.
   useEffect(() => {
     if (!value) return;
-    let frame = 0;
     let raf = 0;
     const run = () => {
       const start = performance.now();
@@ -616,7 +615,6 @@ function HeroStat({ value, label }: { value: number; label: string }) {
     run();
     const loop = setInterval(() => {
       setCount(0);
-      frame++;
       run();
     }, 9000);
     return () => { cancelAnimationFrame(raf); clearInterval(loop); };
