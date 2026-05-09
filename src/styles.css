@@ -256,9 +256,9 @@
   text-transform: uppercase;
   padding: 3px 7px;
   border-radius: 6px;
-  background: rgba(2, 6, 23, 0.72);
-  color: rgba(255,255,255,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(245, 240, 232, 0.92);
+  color: rgba(28, 22, 16, 0.92);
+  border: 1px solid rgba(28, 22, 16, 0.10);
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
@@ -270,13 +270,27 @@
   height: 26px;
   border-radius: 9999px;
   overflow: hidden;
-  background: rgba(255,255,255,0.08);
+  background: #fff;
   border: 1.5px solid var(--pin-color, #fff);
   box-shadow:
-    0 0 0 2px rgba(2,6,23,0.6),
+    0 0 0 2px rgba(245, 240, 232, 0.85),
     0 0 12px 1px color-mix(in oklab, var(--pin-color, #fff) 55%, transparent);
   cursor: pointer;
   transition: transform 0.18s ease;
+}
+
+/* Creamy parchment tint over Mapbox light style */
+.hero-map-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 35%, oklch(0.965 0.015 75 / 0.35) 100%),
+    linear-gradient(180deg, oklch(0.965 0.015 75 / 0.18), oklch(0.965 0.015 75 / 0.28));
+  mix-blend-mode: multiply;
+}
+.hero-map-wrap .mapboxgl-canvas {
+  filter: sepia(0.35) saturate(0.85) hue-rotate(-8deg) brightness(1.02);
 }
 .hero-logo-pin:hover { transform: scale(1.18); }
 .hero-logo-pin img {
