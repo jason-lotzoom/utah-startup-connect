@@ -60,7 +60,6 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-pro-preview",
         messages: [{ role: "system", content: SYSTEM }, ...fullMessages],
-        response_format: { type: "json_object" },
         temperature: 0.7,
       }),
     });
@@ -79,8 +78,11 @@ serve(async (req) => {
 
     let parsed: { reply: string; options: Record<string, string> };
     try {
-      parsed = JSON.parse(content);
+      // Strip markdown code fences if model wrapped the JSON
+      const clean = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      parsed = JSON.parse(clean);
     } catch {
+      console.error("Failed to parse AI response:", content);
       parsed = { reply: "Here's your updated avatar!", options: {} };
     }
 
