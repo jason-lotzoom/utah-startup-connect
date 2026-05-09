@@ -136,10 +136,18 @@ function EventsPage() {
     // Date filter
     if (dateFilter === "week") {
       const cutoff = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      result = result.filter((e) => !e.start_date || new Date(e.start_date) <= cutoff);
+      result = result.filter((e) => {
+        if (!e.start_date) return true;
+        const d = new Date(e.start_date);
+        return d >= now && d <= cutoff;
+      });
     } else if (dateFilter === "month") {
       const cutoff = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      result = result.filter((e) => !e.start_date || new Date(e.start_date) <= cutoff);
+      result = result.filter((e) => {
+        if (!e.start_date) return true;
+        const d = new Date(e.start_date);
+        return d >= now && d <= cutoff;
+      });
     }
 
     // Topic filter
