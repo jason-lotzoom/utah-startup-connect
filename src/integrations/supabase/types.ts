@@ -302,64 +302,25 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_accessories: string | null
-          avatar_clothing: string | null
-          avatar_clothing_color: string | null
-          avatar_eye_type: string | null
-          avatar_eyebrow_type: string | null
-          avatar_facial_hair: string | null
-          avatar_hair: string | null
-          avatar_hair_color: string | null
-          avatar_mouth_type: string | null
-          avatar_seed: string | null
-          avatar_skin_color: string | null
           company_id: string | null
           created_at: string
-          earned_badges: string[] | null
           email: string | null
           full_name: string | null
           id: string
-          username: string | null
         }
         Insert: {
-          avatar_accessories?: string | null
-          avatar_clothing?: string | null
-          avatar_clothing_color?: string | null
-          avatar_eye_type?: string | null
-          avatar_eyebrow_type?: string | null
-          avatar_facial_hair?: string | null
-          avatar_hair?: string | null
-          avatar_hair_color?: string | null
-          avatar_mouth_type?: string | null
-          avatar_seed?: string | null
-          avatar_skin_color?: string | null
           company_id?: string | null
           created_at?: string
-          earned_badges?: string[] | null
           email?: string | null
           full_name?: string | null
           id: string
-          username?: string | null
         }
         Update: {
-          avatar_accessories?: string | null
-          avatar_clothing?: string | null
-          avatar_clothing_color?: string | null
-          avatar_eye_type?: string | null
-          avatar_eyebrow_type?: string | null
-          avatar_facial_hair?: string | null
-          avatar_hair?: string | null
-          avatar_hair_color?: string | null
-          avatar_mouth_type?: string | null
-          avatar_seed?: string | null
-          avatar_skin_color?: string | null
           company_id?: string | null
           created_at?: string
-          earned_badges?: string[] | null
           email?: string | null
           full_name?: string | null
           id?: string
-          username?: string | null
         }
         Relationships: []
       }
