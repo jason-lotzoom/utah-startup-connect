@@ -237,3 +237,31 @@ export const SECTOR_LEGEND: { label: string; color: string }[] = [
   { label: "Outdoor", color: "var(--sector-outdoor)" },
   { label: "Mfg", color: "var(--sector-mfg)" },
 ];
+
+function LogoPin({
+  name,
+  logoUrl,
+  color,
+}: {
+  name: string;
+  logoUrl: string | null;
+  color: string;
+}) {
+  const [broken, setBroken] = useState(false);
+  const initial = (name?.trim()?.[0] ?? "?").toUpperCase();
+  const showLogo = !!logoUrl && !broken;
+  return (
+    <div className="hero-logo-pin" style={{ ["--pin-color" as any]: color }}>
+      {showLogo ? (
+        <img
+          src={logoUrl!}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="hero-monogram">{initial}</div>
+      )}
+    </div>
+  );
+}
