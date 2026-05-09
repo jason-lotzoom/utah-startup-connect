@@ -358,7 +358,7 @@ function Results({
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[380px_1fr]">
       <aside className="lg:sticky lg:top-6 lg:self-start">
-        <ChatPanel quiz={quiz} resultsCount={results?.length ?? 0} loading={loading} />
+        <ChatPanel quiz={quiz} results={results ?? []} loading={loading} />
         <Card className="mt-4 p-4">
           <p className="text-xs uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "var(--font-accent)" }}>
             Filter by topic
@@ -526,13 +526,14 @@ function ResourceCard({ r }: { r: any }) {
 
 function ChatPanel({
   quiz,
-  resultsCount,
+  results,
   loading,
 }: {
   quiz: Quiz;
-  resultsCount: number;
+  results: any[];
   loading: boolean;
 }) {
+  const resultsCount = results.length;
   const greeting = loading
     ? `Matching you with Utah programs for a ${quiz.stage} ${quiz.industry} company in ${quiz.location}…`
     : `I'm your Navigator AI. I found ${resultsCount} matches for a ${quiz.stage} ${quiz.industry} company in ${quiz.location}. Ask me anything — like "which programs offer non-dilutive capital?"`;
@@ -573,7 +574,21 @@ function ChatPanel({
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: next, quiz }),
+        body: JSON.stringify({
+          messages: next,
+          quiz,
+          resources: results.slice(0, 20).map((r) => ({
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            topics: r.topics,
+            industries: r.industries,
+            communities: r.communities,
+            locations: r.locations,
+            link: r.link,
+            email: r.email,
+          })),
+        }),
       });
       if (res.status === 429) throw new Error("Rate limited — please wait a moment.");
       if (res.status === 402) throw new Error("AI credits exhausted.");
