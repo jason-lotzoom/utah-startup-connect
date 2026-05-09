@@ -222,3 +222,130 @@
   .stagger-children > *:nth-child(5) { animation-delay: 320ms; }
   .stagger-children > *:nth-child(6) { animation-delay: 400ms; }
 }
+
+/* ─── Hero Live Map: sector colors + pin pulse ─── */
+:root {
+  --sector-tech: oklch(0.52 0.16 38);          /* canyon red */
+  --sector-life: oklch(0.45 0.10 230);         /* desert sky deep */
+  --sector-aero: oklch(0.58 0.10 230);         /* desert sky */
+  --sector-energy: oklch(0.78 0.09 55);        /* sandstone */
+  --sector-outdoor: oklch(0.55 0.09 55);       /* sandstone deep */
+  --sector-mfg: oklch(0.42 0.12 38);           /* canyon red muted */
+  --sector-other: oklch(0.30 0.04 280);        /* night */
+}
+
+@keyframes pin-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pin-color, #fff), 0 0 8px 2px var(--pin-color, #fff); }
+  50% { box-shadow: 0 0 0 6px transparent, 0 0 14px 4px var(--pin-color, #fff); }
+}
+.hero-pin {
+  width: 10px; height: 10px; border-radius: 9999px;
+  background: var(--pin-color, #fff);
+  animation: pin-pulse 1.8s ease-in-out infinite;
+  cursor: pointer;
+}
+.hero-pin-label {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-accent, ui-monospace, monospace);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: oklch(0.965 0.015 75 / 0.95);
+  color: oklch(0.22 0.04 280);
+  border: 1px solid oklch(0.52 0.16 38 / 0.20);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Logo pin — circular brand mark with sector ring + halo */
+.hero-logo-pin {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #fff;
+  box-shadow:
+    0 0 0 1.5px var(--pin-color, #fff),
+    0 6px 14px -4px rgba(20, 12, 8, 0.35),
+    0 2px 6px -1px rgba(20, 12, 8, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(.2,.9,.3,1.4), box-shadow 0.2s ease;
+}
+.hero-logo-pin:hover {
+  transform: scale(1.22) translateY(-2px);
+  box-shadow:
+    0 0 0 2px var(--pin-color, #fff),
+    0 12px 24px -6px rgba(20, 12, 8, 0.45),
+    0 4px 10px -2px rgba(20, 12, 8, 0.25);
+  z-index: 10;
+}
+.hero-pin-hiring {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: oklch(0.68 0.18 145);
+  border: 2px solid oklch(0.965 0.015 75);
+  box-shadow: 0 0 0 1px oklch(0.68 0.18 145 / 0.4), 0 0 8px oklch(0.68 0.18 145 / 0.6);
+  animation: pin-pulse-dot 1.6s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes pin-pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.85; }
+}
+
+/* Creamy parchment tint over Mapbox light style */
+.hero-map-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 35%, oklch(0.965 0.015 75 / 0.35) 100%),
+    linear-gradient(180deg, oklch(0.965 0.015 75 / 0.18), oklch(0.965 0.015 75 / 0.28));
+  mix-blend-mode: multiply;
+}
+.hero-map-wrap .mapboxgl-canvas {
+  filter: sepia(0.35) saturate(0.85) hue-rotate(-8deg) brightness(1.02);
+}
+
+/* Strip Mapbox chrome on hero */
+.hero-map-wrap .mapboxgl-ctrl,
+.hero-map-wrap .mapboxgl-ctrl-bottom-left,
+.hero-map-wrap .mapboxgl-ctrl-bottom-right,
+.hero-map-wrap .mapboxgl-ctrl-top-left,
+.hero-map-wrap .mapboxgl-ctrl-top-right,
+.hero-map-wrap .mapboxgl-ctrl-attrib,
+.hero-map-wrap .mapboxgl-ctrl-logo {
+  display: none !important;
+}
+.hero-logo-pin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--pin-color, #fff);
+  color: #0b1220;
+  font-family: var(--font-accent, ui-monospace, monospace);
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}

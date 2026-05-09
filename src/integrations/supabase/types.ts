@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       claim_requests: {
         Row: {
           company_id: string
@@ -129,64 +156,64 @@ export type Database = {
       }
       events: {
         Row: {
-          id: string
-          title: string
+          created_at: string
           description: string | null
-          url: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          industries: string[]
+          is_active: boolean
+          is_online: boolean
+          location_name: string | null
+          organizer: string | null
+          scraped_at: string
           source: string
           source_id: string | null
-          start_date: string | null
-          end_date: string | null
-          location_name: string | null
-          is_online: boolean
-          image_url: string | null
-          organizer: string | null
-          industries: string[]
           stages: string[]
+          start_date: string | null
+          title: string
           topics: string[]
-          is_active: boolean
-          scraped_at: string
-          created_at: string
+          url: string | null
         }
         Insert: {
-          id?: string
-          title: string
+          created_at?: string
           description?: string | null
-          url?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          industries?: string[]
+          is_active?: boolean
+          is_online?: boolean
+          location_name?: string | null
+          organizer?: string | null
+          scraped_at?: string
           source: string
           source_id?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          location_name?: string | null
-          is_online?: boolean
-          image_url?: string | null
-          organizer?: string | null
-          industries?: string[]
           stages?: string[]
+          start_date?: string | null
+          title: string
           topics?: string[]
-          is_active?: boolean
-          scraped_at?: string
-          created_at?: string
+          url?: string | null
         }
         Update: {
-          id?: string
-          title?: string
+          created_at?: string
           description?: string | null
-          url?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          industries?: string[]
+          is_active?: boolean
+          is_online?: boolean
+          location_name?: string | null
+          organizer?: string | null
+          scraped_at?: string
           source?: string
           source_id?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          location_name?: string | null
-          is_online?: boolean
-          image_url?: string | null
-          organizer?: string | null
-          industries?: string[]
           stages?: string[]
+          start_date?: string | null
+          title?: string
           topics?: string[]
-          is_active?: boolean
-          scraped_at?: string
-          created_at?: string
+          url?: string | null
         }
         Relationships: []
       }
@@ -302,22 +329,58 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_accessories: string | null
+          avatar_clothing: string | null
+          avatar_clothing_color: string | null
+          avatar_eye_type: string | null
+          avatar_eyebrow_type: string | null
+          avatar_facial_hair: string | null
+          avatar_hair: string | null
+          avatar_hair_color: string | null
+          avatar_mouth_type: string | null
+          avatar_seed: string | null
+          avatar_skin_color: string | null
           company_id: string | null
           created_at: string
+          earned_badges: string[]
           email: string | null
           full_name: string | null
           id: string
         }
         Insert: {
+          avatar_accessories?: string | null
+          avatar_clothing?: string | null
+          avatar_clothing_color?: string | null
+          avatar_eye_type?: string | null
+          avatar_eyebrow_type?: string | null
+          avatar_facial_hair?: string | null
+          avatar_hair?: string | null
+          avatar_hair_color?: string | null
+          avatar_mouth_type?: string | null
+          avatar_seed?: string | null
+          avatar_skin_color?: string | null
           company_id?: string | null
           created_at?: string
+          earned_badges?: string[]
           email?: string | null
           full_name?: string | null
           id: string
         }
         Update: {
+          avatar_accessories?: string | null
+          avatar_clothing?: string | null
+          avatar_clothing_color?: string | null
+          avatar_eye_type?: string | null
+          avatar_eyebrow_type?: string | null
+          avatar_facial_hair?: string | null
+          avatar_hair?: string | null
+          avatar_hair_color?: string | null
+          avatar_mouth_type?: string | null
+          avatar_seed?: string | null
+          avatar_skin_color?: string | null
           company_id?: string | null
           created_at?: string
+          earned_badges?: string[]
           email?: string | null
           full_name?: string | null
           id?: string

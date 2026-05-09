@@ -19,6 +19,7 @@ import { Route as CapitalRouteImport } from './routes/capital'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MapIndexRouteImport } from './routes/map.index'
+import { Route as SettingsThemeRouteImport } from './routes/settings.theme'
 import { Route as MapAddCompanyRouteImport } from './routes/map.add-company'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
@@ -76,6 +77,11 @@ const MapIndexRoute = MapIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MapRoute,
 } as any)
+const SettingsThemeRoute = SettingsThemeRouteImport.update({
+  id: '/settings/theme',
+  path: '/settings/theme',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapAddCompanyRoute = MapAddCompanyRouteImport.update({
   id: '/add-company',
   path: '/add-company',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/map': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/map/add-company': typeof MapAddCompanyRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/map/': typeof MapIndexRoute
   '/map/claim/$id': typeof MapClaimIdRoute
   '/map/company/$id': typeof MapCompanyIdRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
+    | '/settings/theme'
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
+    | '/settings/theme'
     | '/map'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/signup'
     | '/map/add-company'
+    | '/settings/theme'
     | '/map/'
     | '/map/claim/$id'
     | '/map/company/$id'
@@ -229,6 +241,7 @@ export interface RootRouteChildren {
   NavigatorRoute: typeof NavigatorRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  SettingsThemeRoute: typeof SettingsThemeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -302,6 +315,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/map/'
       preLoaderRoute: typeof MapIndexRouteImport
       parentRoute: typeof MapRoute
+    }
+    '/settings/theme': {
+      id: '/settings/theme'
+      path: '/settings/theme'
+      fullPath: '/settings/theme'
+      preLoaderRoute: typeof SettingsThemeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/map/add-company': {
       id: '/map/add-company'
@@ -388,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   NavigatorRoute: NavigatorRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  SettingsThemeRoute: SettingsThemeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

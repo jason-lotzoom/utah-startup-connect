@@ -1,53 +1,66 @@
-Four features to add. The `job_postings` table and `resources` table already exist with the right shape (213 resources, 151 tagged "Funding"; jobs table is empty until the Firecrawl scan is triggered).
+# Hero Map & Search Polish
 
-## 1. Working "Match Me" global search (home hero)
+Five focused changes — all frontend, no DB or backend work.
 
-Today the hero input does nothing visible. Wire it to a real search.
+## 1. Repaint sector pins to the brand palette
 
-- On submit, route to `/navigator?q=<query>` (the Navigator already accepts search params; we'll have it pre-fill and skip to the results step when a free-text query is present).
-- Add a lightweight client-side **search across companies + resources + jobs** (Supabase `or(name.ilike.%q%,description.ilike.%q%)` + same for resources/title and jobs/title) that runs on `?q=`.
-- Render results in three grouped sections: Companies, Programs & Capital, Open roles.
-- **Empty state**: friendly card with the searched term, three suggested example queries (the existing chips), and CTAs to "Browse the map", "Take the Navigator quiz", and "Submit a company".
+Update `--sector-*` tokens in `src/styles.css` to draw only from Canyon Red, Sandstone, Desert Sky, plus dark/light variants of the same hues so every pin reads as part of the brand:
 
-## 2. Job postings table — already exists, harden RLS + add admin UI
+- Tech → Canyon Red (`oklch(0.52 0.16 38)`)
+- Life Sciences → Desert Sky deep (`oklch(0.45 0.10 230)`)
+- Aerospace → Desert Sky (`oklch(0.58 0.10 230)`)
+- Energy → Sandstone (`oklch(0.78 0.09 55)`)
+- Outdoor → Sandstone deep (`oklch(0.55 0.09 55)`)
+- Manufacturing → Canyon Red muted (`oklch(0.42 0.12 38)`)
+- Other → Night (`oklch(0.30 0.04 280)`)
 
-`public.job_postings` is already created with public-read (`is_active = true`), company-owner manage, and admin manage policies — that satisfies the "admin-only create/edit + public read" requirement. We'll:
+Tighten `.hero-pin-label` to a parchment chip with Night text and Canyon Red border at 20% so it stays legible on cream. `.hero-logo-pin` keeps the white interior but the ring + halo use the new sector tokens, so logos pop without looking neon.
 
-- Add a **migration** for one missing piece: a `posted_at TIMESTAMPTZ` column with default `now()` so the job board can sort/filter by recency, plus an index on `(is_active, posted_at desc)`.
-- Add a tiny **admin section** in `/admin` to manually create/edit/deactivate a job posting (form: company picker, title, location, type, url, description) for jobs not picked up by Firecrawl.
+## 2. Strip Mapbox chrome from the hero map
 
-## 3. `/capital` — Funding & Capital tracker
+In `src/components/HeroLiveMap.tsx`:
+- Already passes `attributionControl={false}`. Confirm and also remove the logo via CSS (`.hero-map-wrap .mapboxgl-ctrl-logo { display: none; }` — Mapbox TOS allows this on paid plans; if not, shrink + dim it).
+- Do NOT mount NavigationControl, ScaleControl, FullscreenControl, GeolocateControl (none currently used — keep it that way).
+- Hide any default cluster controls and the bottom-left "Now viewing · …" hotspot chip on the home hero (it duplicates the LIVE chip and adds noise). Keep it on `/map` if reused.
 
-New route `src/routes/capital.tsx` reading from `public.resources` filtered to `topics @> '{Funding}'` (151 rows ready).
+CSS additions in `src/styles.css`:
+```
+.hero-map-wrap .mapboxgl-ctrl,
+.hero-map-wrap .mapboxgl-ctrl-bottom-left,
+.hero-map-wrap .mapboxgl-ctrl-bottom-right,
+.hero-map-wrap .mapboxgl-ctrl-attrib { display: none !important; }
+```
 
-- Hero with count of active capital sources + last updated.
-- Filters (chip rows): **Stage** (Idea / Pre-seed / Seed / Series A+ — derived from title/description heuristics or a new `stages text[]` column we add), **Sector** (from `industries` array), **Community** (from `communities` array — Rural, Veteran, Women, etc.).
-- Card grid: title, description, community/industry badges, "Apply / Learn more" external link.
-- Search box (title + description ilike).
-- Sort: alphabetical / newest.
+## 3. Header search: shorter, with clear button + suggest dropdown
 
-Migration: add nullable `stages text[]` to `resources` (default `{}`) so capital entries can be tagged by stage. Existing rows keep working.
+In `src/routes/index.tsx`:
+- Reduce search container from `flex-1 max-w-xl` to `w-[320px] lg:w-[380px]`, drop `mx-auto`, place it left of the auth button. Goal: visible but compact.
+- Add an `X` button (lucide `X`) inside the input that appears when `aiSearch` is non-empty; clicking clears and refocuses.
+- Build a lightweight client-side suggest dropdown (no new endpoint):
+  - Pull a static list of curated query chips: `["Find seed capital", "Mentors in Lehi", "Biotech grants", "Hiring in Provo", "Rural programs", "Aerospace events"]`.
+  - Plus dynamic matches from `companies.name` already loaded by `HeroLiveMap`. Lift the company list into the page via a callback (`onCompaniesLoaded`) added to `HeroLiveMap` props, or do a small parallel fetch in the nav (max 200 names, name + city only).
+  - Render a `rounded-2xl` panel under the input with up to 6 results: companies first (with sector dot), then static suggestions. Keyboard arrows + Enter to pick. Click navigates: company → `/map/company/$id`, static → `/navigator?q=…`.
+- Mobile: same X button; suggest panel appears below the mobile search field.
 
-## 4. `/jobs` — Public job board
+## 4. Clickable sector legend that filters pins
 
-New route `src/routes/jobs.tsx` reading `public.job_postings` joined with `companies` (for employer name, sector, location, logo).
+`src/components/HeroLiveMap.tsx`:
+- Promote `activeSectors: Set<string> | null` to component state (null = show all). Filter `visibleCompanies` by sector membership.
+- Export a `useSectorFilter` hook OR accept `activeSectors` + `onToggleSector` props from the page so the legend in `index.tsx` controls it.
 
-- Hero showing total open roles + sectors hiring + last refresh time (reuses `hiring_refresh_runs`).
-- Filters: **Industry** (company.sector), **Location** (city extracted from job.location or company.full_address), **Type** (full-time/contract/internship), **Hiring company** search.
-- Job cards: title, company name + logo, location, type chip, posted-at relative, "Apply" CTA (external `url`).
-- Empty state when scan hasn't run: "No live roles yet — the next Firecrawl scan will populate this. [Trigger scan] (admin only)" + link to `/map?hiring=true`.
-- Add nav links to `/jobs` and `/capital` in `SiteNav` desktop + mobile, and in the footer Platform column.
+`src/routes/index.tsx` legend block:
+- Convert each row from `<div>` to `<button>` with `aria-pressed`. Inactive sectors render at 30% opacity with strikethrough dot ring; active sectors render full color.
+- Add a small "All" reset button at the bottom of the panel when any filter is active.
+- Update legend container styling to feel interactive: `hover:bg-white/90 cursor-pointer`, focus ring in Canyon Red.
 
-## Order of work
+## Files touched
 
-1. Migration: add `posted_at` to `job_postings`, add `stages` to `resources`.
-2. `/capital` page (data already exists, fastest visible win).
-3. `/jobs` page + nav links.
-4. Hero "Match Me" wiring + global search results section + empty state.
-5. Admin job-posting form in `/admin`.
+- `src/styles.css` — sector tokens, label chip, Mapbox chrome hide, legend button styles
+- `src/components/HeroLiveMap.tsx` — sector filter prop, hide hotspot chip on hero, expose company list for suggest
+- `src/routes/index.tsx` — shorter header search, X button, suggest dropdown, clickable legend, sector filter state
 
-## Out of scope (to keep this shippable)
+## Out of scope
 
-- Saved searches, email alerts, RSS — defer.
-- Stage extraction from resource descriptions via AI — start with manual tagging via the admin UI on `resources`, add AI back-fill later.
-- Dedicated employer profiles — link to existing `/map/company/$id` page instead.
+- No changes to `/map` page, DB, edge functions, or auth.
+- No new geocoding API for search (suggest is local-only).
+- No changes to flyTo cycle timing or stats banner content.
