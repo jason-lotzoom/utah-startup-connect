@@ -1,43 +1,31 @@
 ## Goal
-Fix the Navigator page (`/navigator`) results UX and chat quality.
 
-## 1. Stop always returning 24 results
-In `src/routes/navigator.tsx` → `rankResources()`:
-- Remove the `.slice(0, 24)` hard cap and the "fall back to all 24 if nothing scored" branch.
-- Return only resources whose `_score` is meaningful (e.g. `_score >= 3`), capped at 12.
-- If nothing scores ≥ 3, show top 6 (not 24) so the count actually reflects relevance.
-- The header "{n} programs matched" will then show a real, varying number (5, 8, 11…) instead of 24 every time.
+Every company pin on the homepage map currently shows a colored monogram because **0 of 253 active companies have a `logo_url`**. All 253 do have a `website`. Fix this by populating `companies.logo_url` for the whole map.
 
-## 2. Card: clickable card + remove broken "View details"
-In `ResourceCard`:
-- The whole card is already a `<Link>` to `/navigator/resource/$id` — keep that (clicking anywhere already opens the page).
-- Delete the `<span>View details →</span>` element entirely (the bottom row keeps only the "Visit site ↗" external link, right-aligned).
-- Keep `e.stopPropagation()` on the external link so it doesn't trigger the card link.
+## Approach
 
-## 3. Replace gradient/initials thumbnails with real stock images
-- Drop the `hashHue` gradient + initials fallback.
-- Use a deterministic Unsplash Source image based on the resource's primary topic/industry so each card gets a relevant photo (e.g. Capital → finance photo, Workspace → coworking, R&D → lab, Education → classroom, Mentorship → meeting, Talent → team, Manufacturing → factory, Tech → office/laptops).
-- Implementation: a `pickStockImage(r)` helper that maps topics/industries to a curated list of Unsplash photo IDs (`https://images.unsplash.com/photo-XXXX?w=800&q=70&auto=format&fit=crop`). Falls back to a generic Utah/business photo.
-- If `r.image_url` exists in DB, still prefer it.
+Use Clearbit's free Logo API (`https://logo.clearbit.com/{domain}`) — it covers the vast majority of real businesses, requires no API key, and returns a clean transparent PNG. The existing `LogoPin` component in `HeroLiveMap.tsx` already falls back to the monogram on `onError`, so any domain Clearbit doesn't have just renders the same way it does today — no regression.
 
-## 4. Chat quality + markdown rendering
-Two issues: raw `**bold**` shows as text, and answers are too long/general.
+### Step 1 — One-shot SQL backfill (covers ~all 253)
 
-**Frontend (`ChatPanel`)**: render assistant messages with `react-markdown` (already used in `ConciergeAgent.tsx`), with `prose prose-sm` styling and link handling. User bubbles stay plain text.
+Run a single migration that derives the domain from `website` and sets:
+```
+logo_url = 'https://logo.clearbit.com/' || <hostname stripped of www. and path>
+```
+for every active company where `logo_url` is null/empty and `website` is a valid http(s) URL. This is instant, deterministic, and covers all 253 rows in one pass.
 
-**Edge function (`supabase/functions/navigator-chat/index.ts`)**: tighten the system prompt so answers are:
-- Max 3 short paragraphs OR a short bullet list (not both).
-- Lead with the single best-fit program (bolded name + one-line why-it-fits).
-- Then 1–2 alternates as bullets with name + 1 sentence each.
-- End with a concrete next step on its own line (apply link or email), no fluff.
-- Forbid: long preambles ("It sounds like you're looking for…"), multi-paragraph essays, recommending programs not in the matched list, and using more than 4 bullets total.
-- Re-deploy `navigator-chat`.
+### Step 2 — Optional cleanup pass for misses
 
-## Files to touch
-- `src/routes/navigator.tsx` — ranking cap, ResourceCard (remove View details, stock image helper), ChatPanel (react-markdown).
-- `supabase/functions/navigator-chat/index.ts` — tighter system prompt, redeploy.
+After the backfill, browser `<img onError>` will hide any Clearbit 404s and fall back to the monogram automatically — no user-visible breakage. For the small set that 404s, the existing admin-only `fetch-logos` edge function (Clearbit HEAD check + Firecrawl scrape fallback) can be re-run later to upgrade those rows from `logo.clearbit.com/...` to a real scraped image. **Not required for this task** — listed only so you know the path to perfect coverage exists.
 
-## Out of scope
-- No DB schema changes.
-- No new routes.
-- Concierge agent (homepage) untouched.
+## Files Touched
+
+- **New migration** under `supabase/migrations/` — single `UPDATE companies SET logo_url = ...` statement scoped to active rows missing a logo.
+
+No frontend changes needed — `HeroLiveMap.tsx` already renders `logo_url` and falls back gracefully.
+
+## Out of Scope
+
+- No new tables, no schema changes
+- No edge function changes
+- No changes to the company detail page or other surfaces (they already read `logo_url`)
