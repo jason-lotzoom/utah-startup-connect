@@ -1,66 +1,83 @@
-# Hero Map & Search Polish
+# Hackathon Close-Out — All 6 Items
 
-Five focused changes — all frontend, no DB or backend work.
+Implementing every priority item from the assessment, in this order so each step builds on the previous one. Approve to ship.
 
-## 1. Repaint sector pins to the brand palette
+---
 
-Update `--sector-*` tokens in `src/styles.css` to draw only from Canyon Red, Sandstone, Desert Sky, plus dark/light variants of the same hues so every pin reads as part of the brand:
+## 1. Persona QA + Navigator tag fixes
 
-- Tech → Canyon Red (`oklch(0.52 0.16 38)`)
-- Life Sciences → Desert Sky deep (`oklch(0.45 0.10 230)`)
-- Aerospace → Desert Sky (`oklch(0.58 0.10 230)`)
-- Energy → Sandstone (`oklch(0.78 0.09 55)`)
-- Outdoor → Sandstone deep (`oklch(0.55 0.09 55)`)
-- Manufacturing → Canyon Red muted (`oklch(0.42 0.12 38)`)
-- Other → Night (`oklch(0.30 0.04 280)`)
+**Goal:** All 6 brief personas (Jordan, Maria, Marcus, Priya, David, Dr. Amir) get meaningfully different recommendations.
 
-Tighten `.hero-pin-label` to a parchment chip with Night text and Canyon Red border at 20% so it stays legible on cream. `.hero-logo-pin` keeps the white interior but the ring + halo use the new sector tokens, so logos pop without looking neon.
+- Add a one-time SQL data fix on `resources` to ensure `communities`, `industries`, `stages`, and `locations` arrays are populated for the obvious cases (women, veterans, rural, students, university tech-transfer, growth-stage international, medtech/FDA, angel/VC).
+- Update the matching scorer in `src/routes/navigator.tsx` to:
+  - hard-boost resources whose `communities` overlap quiz `community`
+  - hard-boost resources tagged with the user's county/region
+  - score `stages` and `industries` as additive, not multiplicative (so a great-stage match still surfaces even if industry tag is missing)
+- Add a small **"Why this matched"** line under each recommendation showing which tags fired (stage / community / industry / location).
 
-## 2. Strip Mapbox chrome from the hero map
+## 2. `/map` filters + investor strip
 
-In `src/components/HeroLiveMap.tsx`:
-- Already passes `attributionControl={false}`. Confirm and also remove the logo via CSS (`.hero-map-wrap .mapboxgl-ctrl-logo { display: none; }` — Mapbox TOS allows this on paid plans; if not, shrink + dim it).
-- Do NOT mount NavigationControl, ScaleControl, FullscreenControl, GeolocateControl (none currently used — keep it that way).
-- Hide any default cluster controls and the bottom-left "Now viewing · …" hotspot chip on the home hero (it duplicates the LIVE chip and adds noise). Keep it on `/map` if reused.
+`src/routes/map.index.tsx`:
 
-CSS additions in `src/styles.css`:
-```
-.hero-map-wrap .mapboxgl-ctrl,
-.hero-map-wrap .mapboxgl-ctrl-bottom-left,
-.hero-map-wrap .mapboxgl-ctrl-bottom-right,
-.hero-map-wrap .mapboxgl-ctrl-attrib { display: none !important; }
-```
+- Add filter chips bar above the map: **Sector** (multi), **Stage**, **Size** (employee bucket), **Hiring now** (toggle), **County** (dropdown). State lives in URL search params so links are shareable.
+- Apply the filters to both the marker layer and the side list.
+- Add an **"Ecosystem at a glance"** strip across the top: total visible companies, % hiring, top 3 sectors, new-this-week count, total open roles. Single Supabase query, computed client-side from filtered set.
 
-## 3. Header search: shorter, with clear button + suggest dropdown
+## 3. Domain-match auto-verify (lightweight verification)
 
-In `src/routes/index.tsx`:
-- Reduce search container from `flex-1 max-w-xl` to `w-[320px] lg:w-[380px]`, drop `mx-auto`, place it left of the auth button. Goal: visible but compact.
-- Add an `X` button (lucide `X`) inside the input that appears when `aiSearch` is non-empty; clicking clears and refocuses.
-- Build a lightweight client-side suggest dropdown (no new endpoint):
-  - Pull a static list of curated query chips: `["Find seed capital", "Mentors in Lehi", "Biotech grants", "Hiring in Provo", "Rural programs", "Aerospace events"]`.
-  - Plus dynamic matches from `companies.name` already loaded by `HeroLiveMap`. Lift the company list into the page via a callback (`onCompaniesLoaded`) added to `HeroLiveMap` props, or do a small parallel fetch in the nav (max 200 names, name + city only).
-  - Render a `rounded-2xl` panel under the input with up to 6 results: companies first (with sector dot), then static suggestions. Keyboard arrows + Enter to pick. Click navigates: company → `/map/company/$id`, static → `/navigator?q=…`.
-- Mobile: same X button; suggest panel appears below the mobile search field.
+`src/routes/map.claim.$id.tsx` + new server function:
 
-## 4. Clickable sector legend that filters pins
+- Create `src/lib/claims.functions.ts` with `submitClaim` server fn (uses `requireSupabaseAuth`).
+- Server logic: extract domain from `companies.website`, compare to the email's domain on the submitter's auth user (`session.user.email`). If they match, set `companies.is_claimed = true`, `claimed_by = user.id`, `is_verified = true`, and insert a `claim_requests` row with `status = 'auto_approved'`. Otherwise insert with `status = 'pending'` (current behavior).
+- UI: show a green "Auto-verified — your email matches the company domain" banner on success, otherwise the existing "we'll review" message.
+- Migration: add `auto_approved` as a valid `claim_requests.status` value (no constraint exists today, so this is just a convention — no schema change needed).
 
-`src/components/HeroLiveMap.tsx`:
-- Promote `activeSectors: Set<string> | null` to component state (null = show all). Filter `visibleCompanies` by sector membership.
-- Export a `useSectorFilter` hook OR accept `activeSectors` + `onToggleSector` props from the page so the legend in `index.tsx` controls it.
+## 4. `/map` visual port from hero
 
-`src/routes/index.tsx` legend block:
-- Convert each row from `<div>` to `<button>` with `aria-pressed`. Inactive sectors render at 30% opacity with strikethrough dot ring; active sectors render full color.
-- Add a small "All" reset button at the bottom of the panel when any filter is active.
-- Update legend container styling to feel interactive: `hover:bg-white/90 cursor-pointer`, focus ring in Canyon Red.
+`src/routes/map.index.tsx` + reuse the look from `HeroLiveMap`:
 
-## Files touched
+- Switch Mapbox style to the same light style, apply parchment tint overlay, hide all Mapbox chrome (reuse `.hero-map-wrap` CSS scope or extract to `.brand-map-wrap`).
+- Replace generic markers with the brand pin component (logo circle + sector ring + hiring pulse dot).
+- Color sector chips with the same `--sector-*` tokens used on the hero.
 
-- `src/styles.css` — sector tokens, label chip, Mapbox chrome hide, legend button styles
-- `src/components/HeroLiveMap.tsx` — sector filter prop, hide hotspot chip on hero, expose company list for suggest
-- `src/routes/index.tsx` — shorter header search, X button, suggest dropdown, clickable legend, sector filter state
+## 5. Company page polish + per-route SEO
+
+`src/routes/map.company.$id.tsx`:
+
+- Convert the loader to a TanStack Query `ensureQueryData` pattern so `head()` can read `loaderData` and emit per-company `<title>`, `<meta description>`, `og:title`, `og:description`, `og:image` (uses `logo_url` or first photo).
+- Photo gallery: simple lightbox on click (no new dep — use Radix `Dialog`).
+- Each job posting gets an "Apply" button linking to `job.url` in a new tab.
+- Add a "Share" button (copies current URL, toast confirmation).
+
+Per-route SEO sweep: add `head()` with unique title/description/og to `/capital`, `/jobs`, `/events`, `/ecosystem`, `/navigator`.
+
+## 6. Founder Snapshot share card
+
+`src/routes/navigator.tsx` (final step):
+
+- Add a "Save / Share my matches" button that opens a dialog with:
+  - Plain-text copy of the top 5 matches (one click → clipboard).
+  - **"Open share card"** link → new route `/navigator/snapshot` that renders a 1200×630 styled card (parchment bg, canyon-red accent, "Jordan, pre-seed, SLC — 6 matches from 5iO") using HTML/CSS only, suitable for screenshot or as an OG image.
+  - "Email me this list" → opens `mailto:` with prefilled subject + body (no backend needed).
+- The snapshot route's `head()` sets `og:image` to a fixed branded asset (the brand image already in `/src/assets`) so the URL itself is shareable on Twitter/LinkedIn.
+
+---
+
+## Files touched (all frontend + one tiny server fn)
+
+- `src/routes/navigator.tsx` — scorer, "why this matched", share dialog
+- `src/routes/navigator.snapshot.tsx` — new shareable card route
+- `src/routes/map.index.tsx` — filters, investor strip, brand pins, parchment tint
+- `src/routes/map.company.$id.tsx` — gallery lightbox, share, apply CTAs, per-page SEO via loader
+- `src/routes/map.claim.$id.tsx` — domain-match success state
+- `src/lib/claims.functions.ts` — new `submitClaim` server fn
+- `src/routes/{capital,jobs,events,ecosystem}.tsx` — `head()` SEO additions
+- `src/styles.css` — extend `.brand-map-wrap` selectors to cover `/map`
+- One small data-cleanup migration on `resources` tags
 
 ## Out of scope
 
-- No changes to `/map` page, DB, edge functions, or auth.
-- No new geocoding API for search (suggest is local-only).
-- No changes to flyTo cycle timing or stats banner content.
+- No new tables, no auth changes, no edge functions added.
+- Hero, header, and global nav stay as they are.
+
+Approve and I'll start with #1 and ship straight through #6.
