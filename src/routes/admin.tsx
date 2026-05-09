@@ -21,6 +21,8 @@ function AdminPage() {
   const [claims, setClaims] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRun, setLastRun] = useState<{ scanned: number; hiring: number; jobs_imported: number; errors: string[] } | null>(null);
+  const [eventsRefreshing, setEventsRefreshing] = useState(false);
+  const [eventsLastRun, setEventsLastRun] = useState<{ scraped: number; inserted: number; updated: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -67,6 +69,20 @@ function AdminPage() {
 
   if (!isAdmin) return null;
 
+  const runEventsRefresh = async () => {
+    setEventsRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-events");
+      if (error) throw error;
+      setEventsLastRun(data);
+      toast.success(`Scraped ${data.scraped} · ${data.inserted} new · ${data.updated} updated`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Events refresh failed");
+    } finally {
+      setEventsRefreshing(false);
+    }
+  };
+
   const runHiringRefresh = async (limit = 15) => {
     setRefreshing(true);
     try {
@@ -107,6 +123,30 @@ function AdminPage() {
             <p className="mt-3 text-xs text-muted-foreground">
               Last run: scanned {lastRun.scanned} · {lastRun.hiring} hiring · {lastRun.jobs_imported} jobs imported
               {lastRun.errors.length > 0 && ` · ${lastRun.errors.length} errors`}
+            </p>
+          )}
+        </Card>
+
+        <Card className="mt-4 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Events feed refresh</h2>
+              <p className="text-sm text-muted-foreground">
+                Scrapes Silicon Slopes, Eventbrite, Meetup, Utah Foundation, and SBA Utah for upcoming events.
+              </p>
+            </div>
+            <Button
+              onClick={runEventsRefresh}
+              disabled={eventsRefreshing}
+              className="bg-[oklch(0.58_0.16_148)] hover:bg-[oklch(0.52_0.14_148)] text-white"
+            >
+              {eventsRefreshing ? "Scraping…" : "Refresh Events"}
+            </Button>
+          </div>
+          {eventsLastRun && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Last run: scraped {eventsLastRun.scraped} · {eventsLastRun.inserted} new · {eventsLastRun.updated} updated
+              {eventsLastRun.errors.length > 0 && ` · ${eventsLastRun.errors.length} errors`}
             </p>
           )}
         </Card>

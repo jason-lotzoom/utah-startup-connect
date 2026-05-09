@@ -127,6 +127,69 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          url: string | null
+          source: string
+          source_id: string | null
+          start_date: string | null
+          end_date: string | null
+          location_name: string | null
+          is_online: boolean
+          image_url: string | null
+          organizer: string | null
+          industries: string[]
+          stages: string[]
+          topics: string[]
+          is_active: boolean
+          scraped_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          url?: string | null
+          source: string
+          source_id?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          location_name?: string | null
+          is_online?: boolean
+          image_url?: string | null
+          organizer?: string | null
+          industries?: string[]
+          stages?: string[]
+          topics?: string[]
+          is_active?: boolean
+          scraped_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          url?: string | null
+          source?: string
+          source_id?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          location_name?: string | null
+          is_online?: boolean
+          image_url?: string | null
+          organizer?: string | null
+          industries?: string[]
+          stages?: string[]
+          topics?: string[]
+          is_active?: boolean
+          scraped_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       job_postings: {
         Row: {
           ai_imported: boolean

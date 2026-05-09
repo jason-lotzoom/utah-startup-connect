@@ -23,6 +23,7 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
         >
           <Link to="/navigator" className={linkCls}>Navigator</Link>
           <Link to="/map" className={linkCls}>Startup Map</Link>
+          <Link to="/events" className={linkCls}>Events</Link>
           {user && <Link to="/dashboard" className={linkCls}>Dashboard</Link>}
           {isAdmin && <Link to="/admin" className={linkCls}>Admin</Link>}
         </div>

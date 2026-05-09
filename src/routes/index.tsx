@@ -24,6 +24,7 @@ function Index() {
           <div className="hidden items-center gap-7 text-sm uppercase tracking-widest md:flex" style={{ fontFamily: "var(--font-accent)" }}>
             <Link to="/navigator" className="hover:text-white/80">Navigator</Link>
             <Link to="/map" className="hover:text-white/80">Startup Map</Link>
+            <Link to="/events" className="hover:text-white/80">Events</Link>
             {user && <Link to="/dashboard" className="hover:text-white/80">Dashboard</Link>}
             {isAdmin && <Link to="/admin" className="hover:text-white/80">Admin</Link>}
             {user ? null : (
@@ -88,10 +89,10 @@ function Index() {
           The Platform
         </p>
         <h2 className="text-4xl font-bold md:text-5xl" style={{ fontFamily: "var(--font-display)" }}>
-          Two tools, deeply connected.
+          Three tools, deeply connected.
         </h2>
 
-        <div className="mt-12 grid gap-8 md:grid-cols-2">
+        <div className="mt-12 grid gap-8 md:grid-cols-3">
           <Link to="/navigator" className="block rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1">
             <div className="mb-4 inline-block rounded-full bg-[oklch(0.52_0.16_38)]/10 px-3 py-1 text-xs uppercase tracking-widest text-[oklch(0.52_0.16_38)]" style={{ fontFamily: "var(--font-accent)" }}>
               Founder's Navigator
@@ -120,6 +121,22 @@ function Index() {
               222 verified Utah startups across 7 sectors. Filter by sector, stage, or hiring status — and claim your own listing.
             </p>
             <span className="text-sm font-semibold text-[oklch(0.58_0.10_230)]">Open Map →</span>
+          </Link>
+
+          <Link
+            to="/events"
+            className="block rounded-t-[2.5rem] rounded-b-2xl border border-border bg-card p-8 shadow-[var(--shadow-warm)] transition hover:-translate-y-1"
+          >
+            <div className="mb-4 inline-block rounded-full bg-[oklch(0.58_0.16_148)]/10 px-3 py-1 text-xs uppercase tracking-widest text-[oklch(0.58_0.16_148)]" style={{ fontFamily: "var(--font-accent)" }}>
+              Events Feed
+            </div>
+            <h3 className="mb-3 text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+              Upcoming Utah startup events.
+            </h3>
+            <p className="mb-6 text-muted-foreground">
+              Personalized events, conventions, pitch nights, and meetups for Utah entrepreneurs — matched to your profile.
+            </p>
+            <span className="text-sm font-semibold text-[oklch(0.58_0.16_148)]">Browse Events →</span>
           </Link>
         </div>
       </section>

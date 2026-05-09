@@ -1,0 +1,215 @@
+create table public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  url text,
+  source text not null,
+  source_id text,
+  start_date timestamptz,
+  end_date timestamptz,
+  location_name text,
+  is_online boolean not null default false,
+  image_url text,
+  organizer text,
+  industries text[] not null default '{}',
+  stages text[] not null default '{}',
+  topics text[] not null default '{}',
+  is_active boolean not null default true,
+  scraped_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique(source, source_id)
+);
+
+alter table public.events enable row level security;
+
+create policy "events public read" on public.events
+  for select using (is_active = true or public.has_role(auth.uid(), 'admin'));
+
+create policy "admins manage events" on public.events
+  for all using (public.has_role(auth.uid(), 'admin'))
+  with check (public.has_role(auth.uid(), 'admin'));
+
+-- Seed: 12 realistic Utah startup events for hackathon demo
+insert into public.events
+  (title, description, url, source, source_id, start_date, end_date, location_name, is_online, organizer, industries, stages, topics)
+values
+  (
+    'TechBuzz Startup Pitch Night',
+    'Monthly pitch competition where early-stage Utah founders present to investors and mentors. Five companies pitch, audience votes, top team wins cash and introductions.',
+    'https://techbuzz.news/events',
+    'manual',
+    'techbuzz-startup-pitch-night-2026-05-14',
+    '2026-05-14 18:00:00+00',
+    '2026-05-14 21:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'TechBuzz News',
+    ARRAY['tech', 'software'],
+    ARRAY['idea', 'pre-seed', 'seed'],
+    ARRAY['capital', 'mentorship']
+  ),
+  (
+    'Silicon Slopes Summit 2026',
+    'Utah's premier tech conference bringing together 20,000+ founders, investors, and operators. Two days of keynotes, panels, and networking across the startup ecosystem.',
+    'https://siliconslopes.com/summit',
+    'manual',
+    'silicon-slopes-summit-2026-05-15',
+    '2026-05-15 08:00:00+00',
+    '2026-05-16 18:00:00+00',
+    'Salt Palace Convention Center, Salt Lake City',
+    false,
+    'Silicon Slopes',
+    ARRAY['tech', 'software', 'saas'],
+    ARRAY['seed', 'series a', 'bootstrapped'],
+    ARRAY['education', 'mentorship', 'capital']
+  ),
+  (
+    'SBA Utah Small Business Week',
+    'Week-long celebration of Utah small businesses and startups hosted by the SBA Utah District. Features workshops on funding, growth strategies, government contracting, and more.',
+    'https://www.sba.gov/offices/district/ut/salt-lake-city',
+    'manual',
+    'sba-utah-small-business-week-2026-05-19',
+    '2026-05-19 09:00:00+00',
+    '2026-05-23 17:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'SBA Utah District',
+    ARRAY['tech', 'manufacturing', 'consumer'],
+    ARRAY['idea', 'pre-seed', 'bootstrapped'],
+    ARRAY['education', 'capital', 'mentorship']
+  ),
+  (
+    'Utah Entrepreneur Challenge',
+    'Annual statewide pitch competition for university students and early-stage startups. Teams compete for $150,000+ in prizes and investor introductions across multiple rounds.',
+    'https://uec.utah.edu',
+    'manual',
+    'utah-entrepreneur-challenge-2026-05-20',
+    '2026-05-20 09:00:00+00',
+    '2026-05-20 17:00:00+00',
+    'University of Utah, Salt Lake City',
+    false,
+    'University of Utah Lassonde',
+    ARRAY['tech', 'software', 'life sciences', 'consumer'],
+    ARRAY['idea', 'pre-seed'],
+    ARRAY['capital', 'education', 'mentorship']
+  ),
+  (
+    'BioHive Life Sciences Meetup',
+    'Monthly networking event for Utah's life sciences and biotech community. Connect with researchers, founders, investors, and executives shaping Utah's health corridor.',
+    'https://www.biohive.org/events',
+    'manual',
+    'biohive-life-sciences-meetup-2026-05-22',
+    '2026-05-22 17:30:00+00',
+    '2026-05-22 20:00:00+00',
+    'BioHive, Salt Lake City',
+    false,
+    'BioHive',
+    ARRAY['life sciences', 'biotech', 'health'],
+    ARRAY['seed', 'series a'],
+    ARRAY['mentorship', 'networking']
+  ),
+  (
+    'Salt Lake Tech Founders Meetup',
+    'Monthly informal gathering for tech founders and startup builders in Salt Lake City. Share challenges, swap intros, and build your local network over drinks and food.',
+    'https://www.meetup.com/salt-lake-tech-founders/',
+    'manual',
+    'salt-lake-tech-founders-meetup-2026-05-28',
+    '2026-05-28 18:00:00+00',
+    '2026-05-28 21:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'SL Tech Founders',
+    ARRAY['tech', 'software', 'saas'],
+    ARRAY['idea', 'pre-seed', 'seed', 'bootstrapped'],
+    ARRAY['mentorship', 'networking']
+  ),
+  (
+    'GOED Economic Summit',
+    'Utah Governor's Office of Economic Development annual summit highlighting state initiatives, economic development programs, and resources for businesses expanding in Utah.',
+    'https://business.utah.gov/events',
+    'manual',
+    'goed-economic-summit-2026-06-03',
+    '2026-06-03 08:30:00+00',
+    '2026-06-03 17:00:00+00',
+    'Utah State Capitol, Salt Lake City',
+    false,
+    'GOED',
+    ARRAY['tech', 'manufacturing', 'aerospace', 'energy'],
+    ARRAY['seed', 'series a', 'bootstrapped'],
+    ARRAY['education', 'capital', 'mentorship']
+  ),
+  (
+    'Women Tech Council Summit',
+    'Annual summit connecting women in technology and entrepreneurship across Utah. Full day of keynotes, workshops, investor panels, and speed networking.',
+    'https://womentechcouncil.com/summit',
+    'manual',
+    'women-tech-council-summit-2026-06-04',
+    '2026-06-04 08:00:00+00',
+    '2026-06-04 18:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'Women Tech Council',
+    ARRAY['tech', 'software'],
+    ARRAY['idea', 'pre-seed', 'seed', 'series a'],
+    ARRAY['education', 'mentorship', 'networking']
+  ),
+  (
+    'Utah Angel Capital Summit',
+    'Premier event connecting accredited angel investors with high-growth Utah startups seeking seed and Series A funding. Curated pitch sessions and investor roundtables.',
+    'https://utahangels.com/summit',
+    'manual',
+    'utah-angel-capital-summit-2026-06-10',
+    '2026-06-10 09:00:00+00',
+    '2026-06-10 17:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'Utah Angels',
+    ARRAY['tech', 'software', 'life sciences', 'consumer'],
+    ARRAY['seed', 'series a'],
+    ARRAY['capital', 'mentorship']
+  ),
+  (
+    'Provo Startup Weekend',
+    'The classic 54-hour startup competition. Pitch your idea Friday night, build your team, validate your concept, and present to judges Sunday evening. Open to all skill levels.',
+    'https://www.techstars.com/communities/startup-weekend',
+    'manual',
+    'provo-startup-weekend-2026-06-12',
+    '2026-06-12 17:00:00+00',
+    '2026-06-14 21:00:00+00',
+    'Provo, UT',
+    false,
+    'Techstars / Startup Weekend',
+    ARRAY['tech', 'software', 'consumer'],
+    ARRAY['idea', 'pre-seed'],
+    ARRAY['education', 'mentorship', 'networking']
+  ),
+  (
+    'Outdoor Retailer Summer Market',
+    'The world's largest outdoor trade show comes to Salt Lake City. Thousands of brands, buyers, and entrepreneurs showcase gear, apparel, and outdoor consumer innovations.',
+    'https://www.outdoorretailer.com',
+    'manual',
+    'outdoor-retailer-summer-market-2026-06-17',
+    '2026-06-17 08:00:00+00',
+    '2026-06-19 18:00:00+00',
+    'Salt Palace Convention Center, Salt Lake City',
+    false,
+    'Outdoor Retailer',
+    ARRAY['outdoor', 'consumer', 'manufacturing'],
+    ARRAY['seed', 'series a', 'bootstrapped'],
+    ARRAY['talent', 'education']
+  ),
+  (
+    'Cleantech Open Utah',
+    'Regional competition for clean energy and sustainability startups. Finalists pitch to investors, receive mentorship from industry experts, and compete for national program entry.',
+    'https://www.cleantechopen.org/utah',
+    'manual',
+    'cleantech-open-utah-2026-06-25',
+    '2026-06-25 09:00:00+00',
+    '2026-06-25 18:00:00+00',
+    'Salt Lake City, UT',
+    false,
+    'Cleantech Open',
+    ARRAY['energy', 'cleantech'],
+    ARRAY['idea', 'pre-seed', 'seed'],
+    ARRAY['capital', 'education', 'mentorship']
+  );
