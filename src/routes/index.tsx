@@ -3,12 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Compass, Search, X } from "lucide-react";
+import { Compass, Search, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import HeroLiveMap, { SECTOR_LEGEND, type HeroLiveMapHandle } from "@/components/HeroLiveMap";
 import { awardBadge } from "@/lib/badges";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,8 +31,41 @@ function Index() {
   const [companies, setCompanies] = useState<Array<{ id: string; name: string; sector: string | null }>>([]);
   const [activeSectors, setActiveSectors] = useState<Set<string>>(new Set());
   const [showSuggest, setShowSuggest] = useState(false);
+  const [heroStats, setHeroStats] = useState<{
+    companies: number;
+    resources: number;
+    sectors: number;
+    latest: { name: string; sector: string | null; id: string } | null;
+  }>({ companies: 0, resources: 0, sectors: 0, latest: null });
   const flyToRef = useRef<HeroLiveMapHandle | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Load real ecosystem counts + freshest company
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      supabase.from("companies").select("id, name, sector", { count: "exact" }).eq("status", "active"),
+      supabase.from("resources").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabase
+        .from("companies")
+        .select("id, name, sector, created_at")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ]).then(([c, r, latest]) => {
+      if (!active) return;
+      const sectors = new Set((c.data ?? []).map((x: any) => x.sector).filter(Boolean));
+      setHeroStats({
+        companies: c.count ?? c.data?.length ?? 0,
+        resources: r.count ?? 0,
+        sectors: sectors.size,
+        latest: latest.data?.[0]
+          ? { id: latest.data[0].id, name: latest.data[0].name, sector: latest.data[0].sector }
+          : null,
+      });
+    });
+    return () => { active = false; };
+  }, []);
 
   const STATIC_SUGGESTIONS = [
     "Find seed capital",
@@ -307,10 +341,10 @@ function Index() {
         {/* Ecosystem Stats Banner */}
         <div className="relative z-10 mt-auto w-full max-w-7xl border-t border-foreground/10 pt-8 pb-4">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-6">
-            <HeroStat value="450" label="Active Companies" />
-            <HeroStat value="85" label="State Resources" />
-            <HeroStat value="120" label="Capital Sources" />
-            <HeroStat value="12" label="Rural Programs" />
+            <HeroStat value={heroStats.companies} label="Active Companies" />
+            <HeroStat value={heroStats.resources} label="State Resources" />
+            <HeroStat value={heroStats.sectors} label="Sectors Covered" />
+            <NewThisWeek latest={heroStats.latest} />
           </div>
         </div>
       </section>
