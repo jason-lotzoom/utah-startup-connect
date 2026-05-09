@@ -120,7 +120,15 @@ function MapPage() {
     if (params.get("hiring") === "true") setHiring(true);
   }, []);
 
-  const mapboxToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) || "";
+  const [mapboxToken, setMapboxToken] = useState<string>("");
+  const [tokenLoading, setTokenLoading] = useState(true);
+  useEffect(() => {
+    supabase.functions
+      .invoke("get-mapbox-token")
+      .then(({ data }) => setMapboxToken((data as any)?.token ?? ""))
+      .catch(() => setMapboxToken(""))
+      .finally(() => setTokenLoading(false));
+  }, []);
   const [popup, setPopup] = useState<any | null>(null);
   const geo = filtered.filter((c) => c.latitude && c.longitude);
 
@@ -182,7 +190,11 @@ function MapPage() {
       </section>
 
       <section className="border-b border-border bg-muted/20">
-        {mapboxToken ? (
+        {tokenLoading ? (
+          <div className="h-[300px] md:h-[500px] w-full flex items-center justify-center text-muted-foreground">
+            <RefreshCw className="h-6 w-6 animate-spin opacity-40" />
+          </div>
+        ) : mapboxToken ? (
           <div className="h-[300px] md:h-[500px] w-full">
             <Map
               mapboxAccessToken={mapboxToken}
@@ -238,18 +250,13 @@ function MapPage() {
               <MapPin className="mx-auto h-10 w-10 text-muted-foreground/50" />
               <h3 className="mt-4 text-xl font-bold">Interactive map is offline</h3>
               <p className="mt-2 text-muted-foreground max-w-lg mx-auto">
-                The Mapbox access token isn't configured for this build. You can still browse
+                The Mapbox access token isn't configured. You can still browse
                 all {companies.length} startups in the directory below.
               </p>
               {isAdmin && (
                 <div className="mt-6 mx-auto max-w-lg rounded-2xl border border-border/60 bg-background/60 p-4 text-left text-xs text-muted-foreground">
                   <p className="font-semibold text-foreground mb-1">Admin: enable the map</p>
-                  <ol className="list-decimal pl-5 space-y-1">
-                    <li>Get a public token from <a className="text-primary underline" href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noreferrer">account.mapbox.com</a>.</li>
-                    <li>Open <span className="font-medium text-foreground">Workspace Settings → Build Secrets</span>.</li>
-                    <li>Add a build secret named <code className="rounded bg-muted px-1 py-0.5 text-foreground">VITE_MAPBOX_TOKEN</code> with the token value.</li>
-                    <li>Republish — the map will come online automatically.</li>
-                  </ol>
+                  <p>Add a public Mapbox token (starts with <code className="rounded bg-muted px-1 py-0.5 text-foreground">pk.</code>) as the <code className="rounded bg-muted px-1 py-0.5 text-foreground">MAPBOX</code> secret in Lovable Cloud. The map will come online automatically.</p>
                 </div>
               )}
             </Card>
