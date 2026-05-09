@@ -131,7 +131,7 @@ bunx convex env set STARTUPSTATE_GOOGLE_CLIENT_ID <same-client-id-as-manifest>
 
 ```bash
 bunx convex env set STARTUPSTATE_GOOGLE_CLIENT_ID <client-id-from-google-cloud>
-bunx convex env set OPENAI_API_KEY <openai-key>
+bunx convex env set STARTUPSTATE_OPENAI_API_KEY <openai-key>
 # OPENROUTER_API_KEY is already configured at the workspace level — no action needed.
 ```
 

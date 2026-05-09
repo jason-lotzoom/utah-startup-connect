@@ -136,7 +136,7 @@ Every AC has an automated feedback loop. Manual feedback is exceptional and just
 | Google Drive API | List files in a chosen folder; export Docs as plain text; download PDFs / plaintext | new — wrapper `convex/lib/driveService.ts`; uses caller-supplied access token | (uses OAuth token) | Free (1B queries/day shared quota) | $0 |
 | Google Sheets CSV export | One-shot fetch of the published GOED resource sheet CSV for catalog import | new — inlined `fetch` in `convex/startupState/resources.ts` (anonymous URL, no wrapper needed) | (none) | Free | $0 |
 | OpenRouter | Structured-JSON classification of ingested signals → `{ stage, industries[], geography, gaps[] }` | existing — `convex/lib/generateObjectOpenRouter.ts` already wired | `OPENROUTER_API_KEY` | ~$0.005/call (Claude Haiku class) | $5 |
-| OpenAI Embeddings | Embedding vectors for `resourceCatalog` rows and `ingestedSignals` matching; `text-embedding-3-small` (1536-dim) | new — wrapper `convex/lib/openaiEmbeddingsService.ts` | `OPENAI_API_KEY` | ~$0.000004/1K tokens | $5 |
+| OpenAI Embeddings | Embedding vectors for `resourceCatalog` rows and `ingestedSignals` matching; `text-embedding-3-small` (1536-dim) | new — wrapper `convex/lib/openaiEmbeddingsService.ts` | `STARTUPSTATE_OPENAI_API_KEY` | ~$0.000004/1K tokens | $5 |
 
 <!-- Column definitions:
 - Integration Status: existing = wrapper + endpoint wired. partial — describe what exists / what's missing. new — describe what to build.
