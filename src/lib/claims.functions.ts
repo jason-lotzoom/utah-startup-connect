@@ -44,10 +44,11 @@ export const submitClaim = createServerFn({ method: "POST" })
     const emailDomain = domainOf(data.email);
     const sessionEmailDomain = domainOf((claims?.email as string) ?? null);
 
-    const autoVerified =
-      !!websiteDomain &&
-      ((emailDomain && emailDomain === websiteDomain) ||
-        (sessionEmailDomain && sessionEmailDomain === websiteDomain));
+    const autoVerified = Boolean(
+      websiteDomain &&
+        ((emailDomain && emailDomain === websiteDomain) ||
+          (sessionEmailDomain && sessionEmailDomain === websiteDomain))
+    );
 
     // Insert request row first (RLS allows the user to insert their own)
     const { error: insertErr } = await supabase.from("claim_requests").insert({
