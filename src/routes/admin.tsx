@@ -41,6 +41,8 @@ function AdminPage() {
   const [lastRun, setLastRun] = useState<{ scanned: number; hiring: number; jobs_imported: number; errors: string[] } | null>(null);
   const [eventsRefreshing, setEventsRefreshing] = useState(false);
   const [eventsLastRun, setEventsLastRun] = useState<{ scraped: number; inserted: number; updated: number; errors: string[] } | null>(null);
+  const [logosRefreshing, setLogosRefreshing] = useState(false);
+  const [logosLastRun, setLogosLastRun] = useState<{ processed: number; updated: number; skipped: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -86,6 +88,20 @@ function AdminPage() {
   };
 
   if (!isAdmin) return null;
+
+  const runLogosRefresh = async (limit = 20) => {
+    setLogosRefreshing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-logos', { body: { limit } });
+      if (error) throw error;
+      setLogosLastRun(data);
+      toast.success(`Logos: ${data.updated} updated · ${data.skipped} skipped · ${data.processed} processed`);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Logo fetch failed');
+    } finally {
+      setLogosRefreshing(false);
+    }
+  };
 
   const runEventsRefresh = async () => {
     setEventsRefreshing(true);
@@ -146,6 +162,31 @@ function AdminPage() {
             <p className="mt-3 text-xs text-muted-foreground">
               Last run: scanned {lastRun.scanned} · {lastRun.hiring} hiring · {lastRun.jobs_imported} jobs imported
               {lastRun.errors.length > 0 && ` · ${lastRun.errors.length} errors`}
+            </p>
+          )}
+        </Card>
+
+        <Card className="mt-4 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Company logos</h2>
+              <p className="text-sm text-muted-foreground">
+                Fetches logos for companies without one via Clearbit, with Firecrawl as fallback. Stores the URL in the DB.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => runLogosRefresh(20)} disabled={logosRefreshing}>
+                {logosRefreshing ? 'Fetching…' : 'Fetch 20 logos'}
+              </Button>
+              <Button variant="outline" onClick={() => runLogosRefresh(50)} disabled={logosRefreshing}>
+                Fetch 50
+              </Button>
+            </div>
+          </div>
+          {logosLastRun && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Last run: processed {logosLastRun.processed} · {logosLastRun.updated} updated · {logosLastRun.skipped} skipped
+              {logosLastRun.errors.length > 0 && ` · ${logosLastRun.errors.length} errors`}
             </p>
           )}
         </Card>

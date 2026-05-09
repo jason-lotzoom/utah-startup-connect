@@ -12,6 +12,83 @@ import { toast } from "sonner";
 import Map, { Marker, Popup, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+function getEffectiveLogo(company: any): string | null {
+  if (company.logo_url) return company.logo_url;
+  if (!company.website) return null;
+  try {
+    const domain = new URL(company.website).hostname.replace(/^www\./, '');
+    return `https://logo.clearbit.com/${domain}`;
+  } catch {
+    return null;
+  }
+}
+
+function companyInitials(name: string): string {
+  return name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+}
+
+function hashHue(id: string): number {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return h % 360;
+}
+
+function CompanyMarker({ company, onClick }: { company: any; onClick: () => void }) {
+  const logoSrc = getEffectiveLogo(company);
+  const [imgFailed, setImgFailed] = useState(false);
+  const hue = hashHue(company.id);
+  const isHiring = company.hiring_status;
+
+  return (
+    <button
+      onClick={onClick}
+      className="group relative cursor-pointer"
+      style={{ background: 'none', border: 'none', padding: 0 }}
+    >
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white shadow-md transition-transform hover:scale-110 group-hover:shadow-lg"
+        style={{
+          borderColor: isHiring ? 'oklch(0.55 0.18 148)' : 'oklch(0.70 0.15 75)',
+          boxShadow: isHiring
+            ? '0 2px 8px oklch(0.55 0.18 148 / 0.4)'
+            : '0 2px 6px rgb(0 0 0 / 0.25)',
+        }}
+      >
+        {logoSrc && !imgFailed ? (
+          <img
+            src={logoSrc}
+            alt={company.name}
+            className="h-6 w-6 rounded-full object-contain"
+            onError={() => setImgFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span
+            className="text-[10px] font-bold text-white leading-none"
+            style={{
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
+            <span
+              style={{
+                background: `linear-gradient(135deg, hsl(${hue} 65% 55%), hsl(${(hue + 40) % 360} 70% 40%))`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {companyInitials(company.name)}
+            </span>
+          </span>
+        )}
+      </div>
+      {isHiring && (
+        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[oklch(0.55_0.18_148)]" />
+      )}
+    </button>
+  );
+}
+
 export const Route = createFileRoute("/map/")({
   component: MapPage,
 });
@@ -208,14 +285,11 @@ function MapPage() {
                   key={c.id}
                   longitude={Number(c.longitude)}
                   latitude={Number(c.latitude)}
-                  onClick={(e) => {
-                    e.originalEvent.stopPropagation();
-                    setPopup(c);
-                  }}
+                  anchor="center"
                 >
-                  <div
-                    className="h-4 w-4 cursor-pointer rounded-full border-2 border-white shadow-lg transition-transform hover:scale-125"
-                    style={{ background: c.hiring_status ? "var(--primary)" : "var(--accent)" }}
+                  <CompanyMarker
+                    company={c}
+                    onClick={() => setPopup(c)}
                   />
                 </Marker>
               ))}
@@ -229,9 +303,24 @@ function MapPage() {
                   closeOnClick={false}
                   className="rounded-xl overflow-hidden"
                 >
-                  <div className="p-1 min-w-[120px]">
-                    <p className="font-bold text-sm">{popup.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{popup.sector}</p>
+                  <div className="p-1 min-w-[160px] max-w-[220px]">
+                    <div className="flex items-center gap-2 mb-1">
+                      {(() => {
+                        const src = getEffectiveLogo(popup);
+                        return src ? (
+                          <img
+                            src={src}
+                            alt={popup.name}
+                            className="h-8 w-8 rounded-lg object-contain bg-gray-50 border border-gray-100"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null;
+                      })()}
+                      <div>
+                        <p className="font-bold text-sm leading-tight">{popup.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{popup.sector}</p>
+                      </div>
+                    </div>
                     <Link
                       to="/map/company/$id"
                       params={{ id: popup.id }}
