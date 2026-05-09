@@ -1,48 +1,73 @@
-# Fix the Map page: real map + real hiring data
 
-## What's actually broken
+# Live hiring data on the Utah Startup Map
 
-1. **Interactive map offline** — `VITE_MAPBOX_TOKEN` is not present in the build. Mapbox needs a *build-time* `VITE_…` variable, which on Lovable lives in **Workspace Settings → Build Secrets** (not the runtime secrets I can add for you). All 220 companies already have lat/long, so the moment the token is in the build, the map renders.
-2. **Hiring = 0** — every row in `companies.hiring_status` is `false`, and `job_postings` is completely empty (0 rows). Nothing is wrong with the UI; there is just no hiring data in the database. It needs to be populated.
+Four pieces, built in order so each one is verifiable on its own.
 
-## Plan
+## 1. Connect Firecrawl
 
-### 1. Mapbox token (you do this once)
-- You add `VITE_MAPBOX_TOKEN` in **Workspace Settings → Build Secrets** with a Mapbox public token (`pk.…` from account.mapbox.com).
-- Next build picks it up automatically; the offline card disappears and the dark map with 220 markers renders. No code change needed — the route already supports it.
+- Link the Firecrawl connector to this project (`standard_connectors--connect` with `connector_id: firecrawl`). This injects `FIRECRAWL_API_KEY` into the server runtime.
+- Verify with `fetch_secrets` that `FIRECRAWL_API_KEY` is present.
+- Quick sanity call from the sandbox to Firecrawl's `/v2/map` on a known URL (e.g. one of the company websites) to confirm the key works before wiring it into the edge function.
 
-### 2. Real hiring data via Firecrawl
-Link the existing **FireCrawl Meetup** connector to this project, then add a backend job that does the work:
+## 2. Edge function: `refresh-hiring`
 
-- New edge function `refresh-hiring` (server-only, uses `FIRECRAWL_API_KEY`):
-  - Pulls every active company that has a `website`.
-  - Calls Firecrawl `map` to find a careers/jobs page (`/careers`, `/jobs`, `/join-us`, `/work-with-us`, etc.).
-  - Calls Firecrawl `scrape` on the best candidate with structured JSON extraction, schema:
-    ```
-    { is_hiring: boolean, jobs: [{ title, location?, type?, url? }] }
-    ```
-  - Updates `companies.hiring_status` and replaces that company's rows in `job_postings` (sets `ai_imported = true`, `is_active = true`).
-  - Throttled (e.g. 5 concurrent, ~1 req/sec) to stay inside Firecrawl rate limits and credit budget.
-  - Returns `{ scanned, hiring, jobs_imported, errors }`.
+New Supabase Edge Function at `supabase/functions/refresh-hiring/index.ts`, server-only, uses the service-role client.
 
-- Trigger options (pick in the questions below):
-  - **Admin button** in `/admin` to run on demand + show last-run summary.
-  - **Daily cron** via `pg_cron` hitting `/api/public/refresh-hiring` with a shared secret header.
+What it does, per run:
+1. `select id, name, website from companies where status = 'active' and website is not null`.
+2. For each company, throttled to ~5 concurrent / ~1 req/sec:
+   - `firecrawl.map(website, { search: 'careers jobs hiring', limit: 10 })` to find the careers page.
+   - Pick the best candidate (URL contains `careers`, `jobs`, `join`, `work-with-us`, `hiring`). Fall back to the website root if nothing matches.
+   - `firecrawl.scrape(url, { formats: [{ type: 'json', schema: { is_hiring: boolean, jobs: [{ title, location?, type?, url? }] } }] })`.
+3. Writes:
+   - `update companies set hiring_status = <bool>, updated_at = now() where id = ...`
+   - `delete from job_postings where company_id = ... and ai_imported = true`
+   - `insert into job_postings (...) values (...)` with `ai_imported = true, is_active = true`.
+4. Returns `{ scanned, hiring, jobs_imported, errors, started_at, finished_at }`.
 
-- Realtime: enable Supabase Realtime on `companies` and `job_postings` so the Map page hero stat ("Hiring now") and per-card "Hiring" badge update live as the function writes results — no refresh needed.
+Trigger:
+- Manual button on `/admin` ("Refresh hiring data") that calls the function and shows the last-run summary.
+- (Optional, can defer) Daily `pg_cron` hitting a `/api/public/refresh-hiring` route guarded by a shared secret header — not in this first pass unless you want it now.
 
-### 3. Map page polish (small)
-- Hero "Hiring now" stat already reads `companies.hiring_status`; once #2 runs it becomes accurate. Add a tiny "Updated <relative time>" line under the stats so users see the data is fresh.
-- Marker color stays: amber = not hiring, primary = hiring.
+## 3. Realtime on `companies` and `job_postings`
+
+Migration:
+```sql
+alter publication supabase_realtime add table public.companies;
+alter publication supabase_realtime add table public.job_postings;
+alter table public.companies replica identity full;
+alter table public.job_postings replica identity full;
+```
+
+Then in `src/routes/map.index.tsx`:
+- Subscribe to `postgres_changes` on `companies` (event `*`). On any change, patch the row in local state by `id` so the hero "Hiring now" stat, the marker color, and the card "Hiring" badge update without a refresh.
+- Same approach on the company detail page (`map.company.$id.tsx`) so a single open card live-updates while the function writes.
+
+## 4. Hiring data status line
+
+A small status strip directly under the hero stats on `/map`, e.g.:
+
+```text
+Hiring data · updated 2 min ago · source: company careers pages via Firecrawl · [Refresh]
+```
+
+- "Updated" timestamp = `max(updated_at)` from `companies` filtered to rows touched by the last refresh. Cheap query, cached client-side, refreshed by the same realtime subscription.
+- Status pill: `Idle` / `Refreshing…` / `Last run failed` based on the most recent run.
+- "Source" text is static: "Company careers pages via Firecrawl".
+- The `[Refresh]` button is admin-only (uses `has_role(auth.uid(), 'admin')`); for everyone else it's just the status text.
+- To track runs cleanly, add a tiny `hiring_refresh_runs` table:
+  - `id, started_at, finished_at, scanned, hiring, jobs_imported, error_count, status (running|success|failed)`
+  - RLS: public read, admin write. Edge function inserts a row at start, updates it at end.
 
 ## Files
 
-- NEW `supabase/functions/refresh-hiring/index.ts` — Firecrawl map + scrape + DB writes, service-role client.
-- NEW `src/routes/api/public/refresh-hiring.ts` — thin public proxy guarded by `REFRESH_HIRING_SECRET` (only if you pick the cron option).
-- EDIT `src/routes/map.index.tsx` — add realtime subscription on `companies`, add "Updated …" line.
-- EDIT `src/routes/admin.tsx` — add "Refresh hiring data" button + last-run summary (only if you pick the admin option).
-- Migration — enable realtime on `companies`, `job_postings`; optional `pg_cron` schedule.
+- NEW `supabase/functions/refresh-hiring/index.ts`
+- NEW migration: realtime on `companies` + `job_postings`, create `hiring_refresh_runs` table with RLS
+- EDIT `src/routes/map.index.tsx` — realtime subscription, status strip
+- EDIT `src/routes/map.company.$id.tsx` — realtime subscription for the open company
+- EDIT `src/routes/admin.tsx` — "Refresh hiring data" button + last 10 runs table
+- `supabase/config.toml` — add `[functions.refresh-hiring]` block (no `verify_jwt = false`; admin button calls it with the user's JWT; admin check enforced inside the function)
 
-## What I need from you
+## Open question
 
-I'll ask the questions next so I can build the exact right version.
+Do you want the daily cron (option in step 2) included now, or just the admin "Refresh" button for the first pass? The button is enough to prove it works; cron can come right after.
