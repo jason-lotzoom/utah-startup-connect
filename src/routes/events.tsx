@@ -68,6 +68,8 @@ function SourceBadge({ source }: { source: string }) {
     utah_foundation: { label: "Utah Foundation", cls: "bg-blue-500/10 text-blue-700 border-blue-200 dark:text-blue-400 dark:border-blue-800" },
     sba_utah: { label: "SBA Utah", cls: "bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:text-indigo-400 dark:border-indigo-800" },
     manual: { label: "5iO", cls: "bg-[oklch(0.58_0.16_148)]/10 text-[oklch(0.35_0.12_148)] border-[oklch(0.58_0.16_148)]/20" },
+    nucleus_utah: { label: "Nucleus Utah", cls: "bg-cyan-500/10 text-cyan-700 border-cyan-200 dark:text-cyan-400 dark:border-cyan-800" },
+    tyler_jennings_linkedin: { label: "Tyler Jennings (LinkedIn)", cls: "bg-blue-600/10 text-blue-700 border-blue-200 dark:text-blue-400 dark:border-blue-800" },
   };
   const { label, cls } = map[source] ?? { label: source, cls: "bg-gray-500/10 text-gray-700 border-gray-200" };
   return (

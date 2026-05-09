@@ -17,6 +17,8 @@ const SOURCES = [
   },
   { url: "https://utahfoundation.org/events/", id: "utah_foundation" },
   { url: "https://www.sba.gov/offices/district/ut/salt-lake-city", id: "sba_utah" },
+  { url: "https://www.nucleusutah.org/events", id: "nucleus_utah" },
+  { url: "https://www.linkedin.com/in/tylermjennings/", id: "tyler_jennings_linkedin" },
 ];
 
 type ScrapedEvent = {
