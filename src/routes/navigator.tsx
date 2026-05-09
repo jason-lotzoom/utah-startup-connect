@@ -322,7 +322,18 @@ function Results({
         <h2 className="text-3xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
           {loading ? "Finding programs…" : `${filtered.length} programs matched`}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground line-clamp-1">"{query}"</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground line-clamp-1">"{query}"</p>
+          {!loading && results && results.length > 0 && (
+            <Link
+              to="/navigator/snapshot"
+              search={{ q: query }}
+              className="text-xs font-bold uppercase tracking-widest text-primary hover:underline"
+            >
+              Open share card →
+            </Link>
+          )}
+        </div>
 
         {loading ? (
           <div className="mt-12 flex justify-center">
