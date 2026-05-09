@@ -53,7 +53,7 @@ ${resourceList ?? "No specific programs were pre-matched. Give general Utah ecos
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro-preview",
+        model: "google/gemini-2.5-flash",
         stream: true,
         messages: [{ role: "system", content: sys }, ...messages],
       }),
