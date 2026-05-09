@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import HeroLiveMap, { SECTOR_LEGEND, type HeroLiveMapHandle } from "@/components/HeroLiveMap";
+import { awardBadge } from "@/lib/badges";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,9 +30,9 @@ function Index() {
   const flyToRef = useRef<HeroLiveMapHandle | null>(null);
 
   const handleAiSearch = () => {
+    if (user) awardBadge(user.id, "first_scout");
     if (aiSearch.trim()) {
       flyToRef.current?.flyToQuery(aiSearch);
-      // small delay so the user sees the fly animation begin
       setTimeout(() => {
         window.location.href = `/navigator?q=${encodeURIComponent(aiSearch)}`;
       }, 1200);

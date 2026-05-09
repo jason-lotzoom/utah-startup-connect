@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { SiteNav, SiteFooter } from "@/components/SiteNav";
+import { awardBadge } from "@/lib/badges";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,12 +26,17 @@ const STAGES = ["Idea", "Pre-seed", "Seed", "Series A+", "Bootstrapped"];
 const COMMUNITIES = ["Rural", "Women", "Veterans", "Underrepresented", "Students"];
 
 function CapitalPage() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [stage, setStage] = useState<string | null>(null);
   const [sector, setSector] = useState<string | null>(null);
   const [community, setCommunity] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) awardBadge(user.id, "capital_curious");
+  }, [user]);
 
   useEffect(() => {
     supabase
