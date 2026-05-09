@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Map, ExternalLink, BarChart3, DollarSign } from "lucide-react";
+import { Map, Compass, ExternalLink, BarChart3, DollarSign } from "lucide-react";
 
 export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
   const dark = variant === "dark";
@@ -117,43 +117,10 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
             >
               <BarChart3 className="h-4 w-4" /> Ecosystem
             </Link>
-            {user && (
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 py-1"
-                onClick={() => setMenuOpen(false)}
-              >
-                <LayoutDashboard className="h-4 w-4" /> Dashboard
-              </Link>
-            )}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 py-1"
-                onClick={() => setMenuOpen(false)}
-              >
-                <Shield className="h-4 w-4" /> Admin
-              </Link>
-            )}
             <div className="mt-2 flex gap-2 border-t border-border pt-3">
-              {user ? (
-                <Button size="sm" variant="outline" onClick={signOut} className="w-full">
-                  Sign out
-                </Button>
-              ) : (
-                <>
-                  <Link to="/auth/login" className="flex-1" onClick={() => setMenuOpen(false)}>
-                    <Button size="sm" variant="outline" className="w-full">
-                      Sign in
-                    </Button>
-                  </Link>
-                  <Link to="/auth/signup" className="flex-1" onClick={() => setMenuOpen(false)}>
-                    <Button size="sm" className="w-full">
-                      Get started
-                    </Button>
-                  </Link>
-                </>
-              )}
+              <Link to="/map/add-company" className="flex-1" onClick={() => setMenuOpen(false)}>
+                <Button size="sm" className="w-full">List your company</Button>
+              </Link>
             </div>
           </div>
         </div>
