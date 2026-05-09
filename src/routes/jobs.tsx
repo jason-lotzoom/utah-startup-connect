@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { awardBadge } from "@/lib/badges";
 import { SiteNav, SiteFooter } from "@/components/SiteNav";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/jobs")({
 });
 
 function JobsPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -218,7 +219,7 @@ function JobsPage() {
               </Card>
             ) : (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
-                {filtered.map((j) => <JobCard key={j.id} j={j} />)}
+                {filtered.map((j) => <JobCard key={j.id} j={j} userId={user?.id} />)}
               </div>
             )}
           </>
@@ -260,7 +261,7 @@ function FilterRow({ label, options, value, onChange }: { label: string; options
   );
 }
 
-function JobCard({ j }: { j: any }) {
+function JobCard({ j, userId }: { j: any; userId?: string }) {
   const company = j.companies;
   const location = j.location || company?.full_address || "Utah";
   return (
@@ -295,6 +296,7 @@ function JobCard({ j }: { j: any }) {
           href={j.url}
           target="_blank"
           rel="noreferrer"
+          onClick={() => { if (userId) awardBadge(userId, "job_hunter"); }}
           className="mt-auto inline-flex items-center gap-1 border-t border-border/30 pt-3 text-xs font-bold text-primary"
         >
           Apply <ExternalLink className="h-3 w-3" />
