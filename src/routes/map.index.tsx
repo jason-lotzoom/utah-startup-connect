@@ -124,7 +124,7 @@ export const Route = createFileRoute("/map/")({
   component: MapPage,
 });
 
-const SECTORS = ["Tech", "Life Sciences", "Aerospace", "Energy", "Outdoor", "Manufacturing", "Other"];
+const SECTORS = ["B2B Software", "Consumer", "FinTech", "Bio/Medical Tech", "Energy", "Marketplaces", "Security"];
 const STAGES = ["Idea", "Pre-seed", "Seed", "Series A", "Series B+", "Profitable"];
 
 function MapPage() {
@@ -215,7 +215,7 @@ function MapPage() {
 
   const filtered = useMemo(() => {
     return companies.filter((c) => {
-      if (sector && c.sector !== sector) return false;
+      if (sector && (c.sector || "").trim().toLowerCase() !== sector.toLowerCase()) return false;
       if (stage && c.stage !== stage) return false;
       if (hiring && !c.hiring_status) return false;
       if (county && inferCounty(c.full_address) !== county) return false;
