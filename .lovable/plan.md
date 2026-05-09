@@ -1,58 +1,95 @@
-## Reality check (before fixes)
+## Goal
 
-I checked the database directly. The user's diagnosis is partially based on stale info:
+Three things, all on the landing page (`/`):
 
-| User claim | Actual state | Action |
-|---|---|---|
-| "Map shows 0 verified Utah startups" | **220 active companies, all with lat/lng** | Likely a brief loading-state flash. Add a non-zero loading guard so the count never reads "0". |
-| "/capital is empty" | **151 funding-tagged resources** in DB, page renders them | No action — works today. |
-| "/events is empty" | DB is empty but page has **12 hardcoded fallback events**, renders fine | Ship as-is, queue real scrape later. |
-| "/jobs is empty" | **DB truly empty (0 rows)**, no fallback → page shows "No live roles" | **Real problem.** Add curated fallback + temporarily hide from primary nav until real data lands. |
-| "Only 3 personas" | True — Jordan, Maria, Dr. Amir | Add Marcus, Priya, David. |
-| "Edit with Lovable badge" | On by default | Toggle off. |
-| "Realtime data from pampam.city" | Pampam is a closed product with **no public API**. The GOED sheet (220 cos) is already imported. | Ship the GOED data we have; add an admin "Re-sync from GOED sheet" button rather than chasing a non-public source. |
+1. **Fix the Get Started 404** — the button links to `/auth`, but only `/auth/login` and `/auth/signup` exist.
+2. **Add a live concierge agent** that helps founders list their business on the Navigator / Startup Map without leaving the home page.
+3. **Inline each tool** (Navigator, Map, Events, Jobs, Ecosystem) as its own interactive section on `/`, each with a small live preview + "View more →" CTA so users can explore everything without navigating away first.
 
-So the *critical* fixes are: jobs fallback + hide-from-nav, +3 persona cards, hide Lovable badge, and a small "0 startups" copy guard on `/map`.
+---
 
-## Plan
+## 1. Fix Get Started → 404
 
-### 1. `/map` — kill the "0 verified" flash
-File: `src/routes/map.index.tsx` (line 292)
+`src/routes/index.tsx:250` uses `<Link to="/auth">`. Switch to `/auth/signup` (logged-out users) and keep "My Dashboard" for logged-in. Add a redirect route at `src/routes/auth.tsx` (renders `<Navigate to="/auth/login" />`) so any other stale `/auth` links also work.
 
-Change the heading copy to use `companies.length || 220` while loading, and only render the count once the Supabase fetch resolves. Same fix on the `/map` route metadata in `src/routes/map.tsx` (already says "222+", fine).
+---
 
-### 2. Jobs page — fallback content + remove from primary nav
-- **`src/routes/jobs.tsx`**: add a `FALLBACK_JOBS` array (~10–12 curated open roles at known Utah startups, mirroring the events fallback pattern). When the DB query returns zero rows, render the fallback so judges see real cards instead of an empty state. Keep the admin "Refresh" CTA visible.
-- **`src/components/SiteNav.tsx`**: remove the `/jobs` desktop and mobile nav links (keep the route reachable via the footer + map filters so the route still exists for SEO).
+## 2. Landing-page Concierge Agent ("List your business" assistant)
 
-### 3. Add the 3 missing persona cards
-File: `src/routes/index.tsx` (Personas section ~line 454)
+A floating, always-available chat widget anchored bottom-right of `/` with a friendly opener:
 
-Switch the grid from 3 to 6 cards (responsive: `sm:grid-cols-2 lg:grid-cols-3`) and append:
+> "Hi 👋 I'm 5iO Concierge. Want to list your startup on the Map, find resources in Navigator, or post a job? I'll guide you in 30 seconds."
 
-- **Marcus** — Veteran Founder, Ogden — Defense + manufacturing pre-seed → `search={{ stage: "Pre-seed", industry: "Manufacturing", needs: "Capital", location: "Weber County", community: "Veterans" }}`
-- **Priya** — B2B SaaS Founder, Lehi — Raising venture → `search={{ stage: "Series A+", industry: "Tech / Software", needs: "Capital", location: "Utah County" }}`
-- **David** — Medical Device Founder, Salt Lake — International expansion → `search={{ stage: "Seed", industry: "Life Sciences", needs: "International Trade", location: "Salt Lake County" }}`
+Behaviour:
+- Streaming chat (reuses the existing `navigator-chat` edge function pattern → new `concierge-chat` edge function with a system prompt focused on **listing flows**: Map company submission, Navigator resource intake, jobs, events).
+- Smart action buttons appear inline in the AI replies: **"List my company on the Map"**, **"Submit a resource"**, **"Post a job"**, **"Add an event"** — each links to the matching add/claim page (`/map/add-company`, etc.) or opens an embedded mini-form when the user is logged in.
+- Shows a "Sign in to continue" prompt with a link to `/auth/signup` if the user tries a write action while logged out.
+- Persists conversation in `sessionStorage` only (no DB writes for v1).
+- Collapsed by default as a pill button "Need help listing? Ask the Concierge"; expands into a 380×560 card.
 
-Use existing `PersonaCard` component (already wired to `/navigator?search=…`). Source persona portraits from Unsplash in the same style as existing cards.
+Component: `src/components/ConciergeAgent.tsx`. Mounted once in `src/routes/index.tsx`.
 
-### 4. Hide the "Edit with Lovable" badge
-Call `publish_settings--set_badge_visibility { hide_badge: true }` — one-shot setting, no code change needed.
+---
 
-### 5. Map data refresh affordance (optional polish, ~10 min)
-On `/admin`, add a "Re-sync GOED companies" button that re-runs the existing CSV import flow (`src/lib/csv-import.ts` is already wired). This gives judges a visible answer to "where does the data come from?" without us promising a live pampam mirror we can't deliver.
+## 3. Inline tool sections on `/` with live data + "View more"
 
-### Out of scope (and why)
-- **Real-time mirror of pampam.city** — they don't expose an API and scraping their canvas-based map is not viable in a hackathon timeframe. We already match their dataset (GOED sheet, 220 companies). I'll explain this in the response, not in code.
-- **Live job scraping run** — the `refresh-hiring` edge function exists; triggering it is admin-gated and slow. Better to ship a fallback now and let the admin run the crawl post-demo.
-- **Events DB backfill** — fallback already covers it for demo purposes.
+Replace the current "Three tools, deeply connected" cards with **functional sections**. Each pulls real Supabase data, renders the top 4–6 results, and links to the full page.
 
-### Files touched
-- `src/routes/map.index.tsx` (1-line copy guard)
-- `src/routes/jobs.tsx` (fallback array + render branch)
-- `src/components/SiteNav.tsx` (remove `/jobs` nav links)
-- `src/routes/index.tsx` (3 new PersonaCards)
-- `src/routes/admin.tsx` (optional re-sync button)
-- Settings call: hide Lovable badge
+### a) Navigator preview (`#navigator`)
+- Mini-quiz: 3 quick chips ("Pre-seed", "Software", "SLC area") → calls existing matching logic, shows top 3 matched resources as cards.
+- "View all 213 resources →" → `/navigator`.
 
-No DB migrations, no new routes, no auth changes.
+### b) Startup Map preview (`#map`)
+- Compact 320px-tall map with the existing `HeroLiveMap` (already on page) + sector filter chips + "Featured this week" carousel (latest 6 companies).
+- CTAs: **"Explore full map →"** (`/map`) and **"List your company →"** (`/map/add-company`).
+
+### c) Events preview (`#events`)
+- Pulls next 4 upcoming events from `events` table; each card → `/events`.
+- "View all events →" link.
+
+### d) Jobs preview (`#jobs`)
+- Top 6 jobs (uses existing `FALLBACK_JOBS` if DB empty). Filter chips by city.
+- "View all jobs →" → `/jobs`.
+
+### e) Ecosystem snapshot (`#ecosystem`)
+- 4 stat tiles (companies, capital raised, sectors, hubs) + 6 logo grid of top investors/accelerators.
+- "Explore ecosystem →" → `/ecosystem`.
+
+Each section uses `<section id="...">` so the existing nav links scroll-anchor when clicked. All "View more" CTAs preserve full-page navigation for SEO.
+
+### Layout pattern
+
+```text
+[ Hero map + search ]
+[ Concierge floating button ─────────────► ]
+[ § Navigator preview      → View all ]
+[ § Startup Map preview    → Explore | List company ]
+[ § Events preview         → View all ]
+[ § Jobs preview           → View all ]
+[ § Ecosystem snapshot     → Explore ]
+[ Personas / footer (existing) ]
+```
+
+---
+
+## Technical notes
+
+- New edge function `supabase/functions/concierge-chat/index.ts` (mirrors `navigator-chat`, different system prompt, no resource-list grounding required).
+- `ConciergeAgent.tsx` uses `react-markdown` for streaming responses (already in deps via Navigator).
+- Each section is its own small component (`HomeNavigatorSection.tsx`, `HomeMapSection.tsx`, `HomeEventsSection.tsx`, `HomeJobsSection.tsx`, `HomeEcosystemSection.tsx`) inside `src/components/home/` for clean separation.
+- All data fetched client-side with the public `supabase` client — no auth or RLS changes needed (existing tables are already readable).
+- `auth.tsx` redirect route prevents future `/auth` 404s.
+
+## Files touched
+
+- **edit** `src/routes/index.tsx` — fix Get Started link, mount ConciergeAgent + 5 home sections.
+- **new** `src/routes/auth.tsx` — redirect to `/auth/login`.
+- **new** `src/components/ConciergeAgent.tsx`.
+- **new** `src/components/home/HomeNavigatorSection.tsx`, `HomeMapSection.tsx`, `HomeEventsSection.tsx`, `HomeJobsSection.tsx`, `HomeEcosystemSection.tsx`.
+- **new** `supabase/functions/concierge-chat/index.ts` (+ config entry if needed).
+
+## Out of scope
+
+- Persisting concierge chats to DB.
+- Voice agent (ElevenLabs) — can come later if you want a true voice concierge.
+- Redesigning the personas section (kept as-is).
