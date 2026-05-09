@@ -286,72 +286,51 @@ function Index() {
       </nav>
 
       {/* ─── Hero Section ──── */}
-      <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-background px-6 pt-20">
-        {/* Live cinematic map background */}
-        <div className="absolute inset-0 z-0">
-          <HeroLiveMap
-            onReady={(n) => setTrackedCount(n)}
-            flyToRef={flyToRef}
-            activeSectors={activeSectors.size > 0 ? activeSectors : null}
-            onCompaniesLoaded={(rows) => setCompanies(rows.map((r) => ({ id: r.id, name: r.name, sector: r.sector })))}
-            hideHotspotChip
-          />
-          {/* Creamy parchment tint to match the brand palette */}
-          <div className="hero-map-tint" />
-          {/* Soft fade only at top + bottom so map stays clean & centered */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-        </div>
+      <section className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-background px-6 pt-32 pb-24">
+        <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+          <p
+            className="text-[10px] font-semibold uppercase tracking-[0.4em] text-accent"
+            style={{ fontFamily: "var(--font-accent)" }}
+          >
+            Utah Startup Ecosystem
+          </p>
+          <h1
+            className="mt-6 text-5xl font-normal leading-[1.05] text-foreground md:text-7xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Navigate Utah's<br />
+            <span className="italic text-accent">entrepreneurial</span> terrain.
+          </h1>
+          <p className="mt-8 max-w-xl text-base leading-relaxed text-foreground/60 md:text-lg">
+            One quiet place to find the right capital, programs, and people across the state.
+          </p>
 
-        {/* LIVE chip top-right */}
-        <div className="absolute top-20 right-6 z-20 hidden md:flex items-center gap-2 rounded-full border border-emerald-600/30 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 backdrop-blur-md shadow-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live · {trackedCount ?? "—"} startups tracked
-        </div>
-
-        {/* Sector legend bottom-right — clickable filter */}
-        <div className="absolute bottom-6 right-6 z-20 hidden lg:flex flex-col gap-1 rounded-2xl border border-foreground/10 bg-white/80 px-3 py-2.5 backdrop-blur-md shadow-sm">
-          <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-foreground/50 mb-1">Filter by sector</p>
-          {SECTOR_LEGEND.map((s) => {
-            const active = activeSectors.size === 0 || activeSectors.has(s.label === "Life Sci" ? "Life Sciences" : s.label === "Mfg" ? "Manufacturing" : s.label);
-            const sectorKey = s.label === "Life Sci" ? "Life Sciences" : s.label === "Mfg" ? "Manufacturing" : s.label;
-            return (
-              <button
-                key={s.label}
-                type="button"
-                aria-pressed={activeSectors.has(sectorKey)}
-                onClick={() => toggleSector(sectorKey)}
-                className={`flex items-center gap-2 rounded-md px-1.5 py-1 text-[10px] transition hover:bg-foreground/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${active ? "text-foreground/80" : "text-foreground/30"}`}
-              >
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: active ? s.color : "transparent", border: active ? "none" : `1.5px solid ${s.color}` }}
-                />
-                {s.label}
-              </button>
-            );
-          })}
-          {activeSectors.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setActiveSectors(new Set())}
-              className="mt-1 rounded-md px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:bg-primary/10"
+          <div className="mt-10 flex w-full max-w-xl items-center gap-2 rounded-full border border-border bg-card/60 px-2 py-1.5 backdrop-blur-sm focus-within:border-accent/60">
+            <Search className="ml-3 h-4 w-4 text-foreground/40" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Tell us about your startup…"
+              className="h-10 w-full bg-transparent text-sm text-foreground placeholder:text-foreground/40 focus:outline-none"
+              value={aiSearch}
+              onChange={(e) => setAiSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+            />
+            <Button
+              size="sm"
+              onClick={handleAiSearch}
+              className="h-9 rounded-full px-5 text-xs"
             >
-              Show all
-            </button>
-          )}
-        </div>
+              Match
+            </Button>
+          </div>
 
-        {/* SR-only h1 for SEO/a11y — hero is intentionally a clean live map */}
-        <h1 className="sr-only">Navigate the Silicon Slopes — Utah's startup ecosystem platform</h1>
-
-        {/* Ecosystem Stats Banner */}
-        <div className="relative z-10 mt-auto w-full max-w-7xl border-t border-foreground/10 pt-8 pb-4">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-6">
-            <HeroStat value={heroStats.companies} label="Active Companies" />
-            <HeroStat value={heroStats.resources} label="State Resources" />
-            <HeroStat value={heroStats.sectors} label="Sectors Covered" />
-            <NewThisWeek latest={heroStats.latest} />
+          <div className="mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-foreground/50">
+            <MiniStat value={heroStats.companies} label="Companies" />
+            <span className="h-1 w-1 rounded-full bg-foreground/20" />
+            <MiniStat value={heroStats.resources} label="Resources" />
+            <span className="h-1 w-1 rounded-full bg-foreground/20" />
+            <MiniStat value={heroStats.sectors} label="Sectors" />
           </div>
         </div>
       </section>
@@ -571,6 +550,26 @@ function StatBlock({ n, l }: { n: number; l: string }) {
 }
 
 function HeroStat({ value, label }: { value: number; label: string }) {
+  return null as any;
+}
+
+function MiniStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span
+        className="text-xl font-normal text-foreground/80 tabular-nums"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        {value || "—"}
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-foreground/40">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function _UnusedHeroStat({ value, label }: { value: number; label: string }) {
   const [count, setCount] = useState(0);
 
   // Looping count-up: animates whenever the target value changes,
