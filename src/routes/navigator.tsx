@@ -15,6 +15,8 @@ export const Route = createFileRoute("/navigator")({
     meta: [
       { title: "Founder's Navigator — 5iO" },
       { name: "description", content: "Find the right Utah programs, capital and resources in two minutes." },
+      { property: "og:title", content: "Founder's Navigator — 5iO" },
+      { property: "og:description", content: "Find the right Utah programs, capital and resources in two minutes." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>) => {
