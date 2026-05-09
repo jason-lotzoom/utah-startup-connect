@@ -139,20 +139,15 @@ function Index() {
             <Sparkles className="h-3 w-3" />
             Empowering the Utah Startup State
           </div>
-          
-          <h1 className="animate-fade-in-up text-5xl font-bold tracking-tight text-white md:text-8xl leading-[0.9]" style={{ fontFamily: "var(--font-display)" }}>
-            Navigate the <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-200">
-              Silicon Slopes.
-            </span>
-          </h1>
-          
-          <p className="mx-auto mt-8 max-w-2xl animate-fade-in-up text-lg text-white/60 md:text-xl leading-relaxed" style={{ animationDelay: "0.1s" }}>
-            The definitive platform for Utah founders. Find capital, mentors, and community tailored to your stage and sector in 60 seconds.
+
+          {/* SR-only h1 keeps semantic structure for SEO/a11y while map dominates visually */}
+          <h1 className="sr-only">Navigate the Silicon Slopes — Utah's startup ecosystem platform</h1>
+          <p className="animate-fade-in-up text-xs md:text-sm font-semibold uppercase tracking-[0.4em] text-white/70">
+            Navigate the <span className="text-primary">Silicon Slopes</span>
           </p>
 
           {/* AI Instant Match */}
-          <div className="mt-12 mx-auto max-w-2xl animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          <div className="mt-6 mx-auto max-w-2xl animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
             <div className="group relative rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-2xl transition-all focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
               <div className="flex items-center gap-3 px-4">
                 <Search className="h-5 w-5 text-white/40 group-focus-within:text-primary transition-colors" />
