@@ -2,7 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Compass, Map, LayoutDashboard, Shield, ExternalLink, BarChart3 } from "lucide-react";
+import { Compass, Map, LayoutDashboard, Shield, ExternalLink, BarChart3, Briefcase, DollarSign } from "lucide-react";
 
 export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
   const { user, isAdmin, signOut } = useAuth();
@@ -50,6 +50,8 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
         >
           <NavLink to="/navigator" label="Navigator" active={pathname.startsWith("/navigator")} cls={linkCls} />
           <NavLink to="/map" label="Startup Map" active={pathname.startsWith("/map")} cls={linkCls} />
+          <NavLink to="/jobs" label="Jobs" active={pathname.startsWith("/jobs")} cls={linkCls} />
+          <NavLink to="/capital" label="Capital" active={pathname.startsWith("/capital")} cls={linkCls} />
           <NavLink to="/ecosystem" label="Ecosystem" active={pathname === "/ecosystem"} cls={linkCls} />
           {user && <NavLink to="/dashboard" label="Dashboard" active={pathname === "/dashboard"} cls={linkCls} />}
           {isAdmin && <NavLink to="/admin" label="Admin" active={pathname === "/admin"} cls={linkCls} />}
@@ -118,6 +120,12 @@ export function SiteNav({ variant = "light" }: { variant?: "light" | "dark" }) {
               onClick={() => setMenuOpen(false)}
             >
               <Map className="h-4 w-4" /> Startup Map
+            </Link>
+            <Link to="/jobs" className="flex items-center gap-2 py-1" onClick={() => setMenuOpen(false)}>
+              <Briefcase className="h-4 w-4" /> Jobs
+            </Link>
+            <Link to="/capital" className="flex items-center gap-2 py-1" onClick={() => setMenuOpen(false)}>
+              <DollarSign className="h-4 w-4" /> Capital
             </Link>
             <Link
               to="/ecosystem"
@@ -225,6 +233,12 @@ export function SiteFooter() {
               </Link>
               <Link to="/map" className="hover:text-white transition">
                 Utah Startup Map
+              </Link>
+              <Link to="/jobs" className="hover:text-white transition">
+                Job Board
+              </Link>
+              <Link to="/capital" className="hover:text-white transition">
+                Capital Tracker
               </Link>
               <Link to="/map/add-company" className="hover:text-white transition">
                 Submit a Company

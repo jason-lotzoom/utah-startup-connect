@@ -172,6 +172,7 @@ export type Database = {
           id: string
           is_active: boolean
           location: string | null
+          posted_at: string
           title: string
           type: string | null
           url: string | null
@@ -184,6 +185,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           location?: string | null
+          posted_at?: string
           title: string
           type?: string | null
           url?: string | null
@@ -196,6 +198,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           location?: string | null
+          posted_at?: string
           title?: string
           type?: string | null
           url?: string | null
@@ -271,6 +274,7 @@ export type Database = {
           is_active: boolean
           link: string | null
           locations: string[] | null
+          stages: string[]
           title: string
           topics: string[] | null
           updated_at: string
@@ -287,6 +291,7 @@ export type Database = {
           is_active?: boolean
           link?: string | null
           locations?: string[] | null
+          stages?: string[]
           title: string
           topics?: string[] | null
           updated_at?: string
@@ -303,6 +308,7 @@ export type Database = {
           is_active?: boolean
           link?: string | null
           locations?: string[] | null
+          stages?: string[]
           title?: string
           topics?: string[] | null
           updated_at?: string

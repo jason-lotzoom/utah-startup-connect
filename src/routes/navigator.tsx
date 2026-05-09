@@ -398,9 +398,26 @@ function Results({
         ) : (
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             {filtered.length === 0 && (
-              <p className="col-span-full text-sm text-muted-foreground">
-                No matches yet. Try the quiz again with broader needs or a different region.
-              </p>
+              <Card className="col-span-full rounded-3xl border-dashed bg-muted/30 p-10 text-center">
+                <h3 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                  No exact matches
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                  We couldn't find programs matching every criterion. Try one of these instead:
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <Link to="/capital">
+                    <Button variant="outline" className="rounded-2xl">Browse all capital sources</Button>
+                  </Link>
+                  <Link to="/map">
+                    <Button variant="outline" className="rounded-2xl">Explore the startup map</Button>
+                  </Link>
+                  <Link to="/jobs">
+                    <Button variant="outline" className="rounded-2xl">See open roles</Button>
+                  </Link>
+                  <Button variant="ghost" className="rounded-2xl" onClick={reset}>Restart quiz</Button>
+                </div>
+              </Card>
             )}
             {filtered.map((r) => (
               <ResourceCard key={r.id} r={r} />
