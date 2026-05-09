@@ -593,19 +593,82 @@ function StatBlock({ n, l }: { n: number; l: string }) {
   );
 }
 
-function HeroStat({ value, label }: { value: string; label: string }) {
+function HeroStat({ value, label }: { value: number; label: string }) {
+  const [count, setCount] = useState(0);
+
+  // Looping count-up: animates whenever the target value changes,
+  // and replays every ~9s so the hero feels alive.
+  useEffect(() => {
+    if (!value) return;
+    let frame = 0;
+    let raf = 0;
+    const run = () => {
+      const start = performance.now();
+      const duration = 1600;
+      const tick = (now: number) => {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        setCount(Math.floor(eased * value));
+        if (p < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    run();
+    const loop = setInterval(() => {
+      setCount(0);
+      frame++;
+      run();
+    }, 9000);
+    return () => { cancelAnimationFrame(raf); clearInterval(loop); };
+  }, [value]);
+
   return (
     <div className="flex flex-col items-center text-center">
       <div
-        className="text-4xl md:text-5xl font-normal text-foreground/90 leading-none"
+        className="text-4xl md:text-5xl font-normal text-foreground/90 leading-none tabular-nums"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        {value}
+        {count}
         <span className="text-foreground/60">+</span>
       </div>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">
         {label}
       </p>
     </div>
+  );
+}
+
+function NewThisWeek({
+  latest,
+}: {
+  latest: { id: string; name: string; sector: string | null } | null;
+}) {
+  if (!latest) {
+    return (
+      <div className="flex flex-col items-center text-center">
+        <div className="text-4xl md:text-5xl font-normal text-foreground/40 leading-none" style={{ fontFamily: "var(--font-display)" }}>—</div>
+        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">New this week</p>
+      </div>
+    );
+  }
+  return (
+    <Link
+      to="/map/company/$id"
+      params={{ id: latest.id }}
+      className="group flex flex-col items-center text-center"
+    >
+      <div className="flex items-center gap-1.5 leading-none">
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <span
+          className="text-2xl md:text-3xl font-normal text-foreground/90 truncate max-w-[180px] group-hover:text-primary transition"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {latest.name}
+        </span>
+      </div>
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/80">
+        New this week
+      </p>
+    </Link>
   );
 }
