@@ -337,7 +337,7 @@ function Results( {
         </h2>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground line-clamp-1">"{query}"</p>
-          {{!loading && results && results.length > 0 && (
+          {!loading && results && results.length > 0 && (
             <Link
               to="/navigator/snapshot"
               search={{ q: query }}
@@ -345,7 +345,7 @@ function Results( {
             >
               Open share card â
             </Link>
-          )}}
+          )}
         </div>
 
         {loading ? (
