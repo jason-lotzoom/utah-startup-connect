@@ -184,6 +184,35 @@ function AddCompany() {
       <Card className="mt-8 p-6">
         <form onSubmit={submit} className="space-y-5">
           {/* âââ Basic Info ââââ */}
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
+              <Sparkles className="h-3.5 w-3.5" /> AI Autofill
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Enter your website or company name and we'll research the rest. Review and edit before submitting.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Input
+                placeholder="acme.com or Acme Robotics"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    runAutofill();
+                  }
+                }}
+              />
+              <Button type="button" onClick={runAutofill} disabled={aiLoading} className="shrink-0">
+                {aiLoading ? (
+                  <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Researching</>
+                ) : (
+                  <><Sparkles className="mr-1.5 h-3.5 w-3.5" /> Autofill</>
+                )}
+              </Button>
+            </div>
+          </div>
+
           <SectionLabel>Basic Information</SectionLabel>
 
           <Field label="Company name" required>
