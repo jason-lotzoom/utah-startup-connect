@@ -13,6 +13,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "5iO — Utah's Startup Ecosystem Platform" },
       { name: "description", content: "Find resources, explore startups, and navigate Utah's world-class entrepreneurial ecosystem." },
+      { property: "og:title", content: "5iO — Utah's Startup Ecosystem Platform" },
+      { property: "og:description", content: "Find resources, explore startups, and navigate Utah's world-class entrepreneurial ecosystem." },
     ],
   }),
   component: Index,
