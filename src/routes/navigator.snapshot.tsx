@@ -9,17 +9,14 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/navigator/snapshot")({
   validateSearch: (s: Record<string, unknown>) => ({ q: (s.q as string) || "" }),
-  head: ({ search }) => {
-    const q = (search as any)?.q || "Founder Snapshot";
-    return {
-      meta: [
-        { title: `Founder Snapshot — ${q.slice(0, 60)}` },
-        { name: "description", content: `Curated Utah resources for: ${q}` },
-        { property: "og:title", content: `Founder Snapshot — 5iO` },
-        { property: "og:description", content: `Curated Utah resources for: ${q}` },
-      ],
-    };
-  },
+  head: () => ({
+    meta: [
+      { title: "Founder Snapshot — 5iO" },
+      { name: "description", content: "Your curated Utah startup playbook." },
+      { property: "og:title", content: "Founder Snapshot — 5iO" },
+      { property: "og:description", content: "Your curated Utah startup playbook." },
+    ],
+  }),
   component: SnapshotPage,
 });
 
