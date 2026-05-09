@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Sparkles, Compass, Map, BarChart3, Search, Loader2 } from "lucide-react";
+import { Compass, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -44,8 +44,8 @@ function Index() {
     <div className="bg-background min-h-screen selection:bg-primary/20">
       {/* ─── Top Nav ──── */}
       <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-black/20 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-white shadow-lg shadow-primary/20">
               5
             </div>
@@ -53,12 +53,12 @@ function Index() {
               5iO Navigator
             </span>
           </div>
-          <div className="hidden items-center gap-8 text-xs font-semibold uppercase tracking-widest text-white/70 md:flex">
+          <div className="hidden items-center gap-6 text-xs font-semibold uppercase tracking-widest text-white/70 lg:flex shrink-0">
             <Link to="/navigator" className="transition hover:text-white/80">
               Navigator
             </Link>
             <Link to="/map" className="transition hover:text-white/80">
-              Startup Map
+              Map
             </Link>
             <Link to="/events" className="transition hover:text-white/80">
               Events
@@ -77,7 +77,31 @@ function Index() {
               </Link>
             )}
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Header search — replaces the hero search */}
+          <div className="hidden md:flex flex-1 max-w-xl mx-auto">
+            <div className="group relative flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
+              <Search className="h-4 w-4 text-white/40 group-focus-within:text-primary" />
+              <input
+                type="text"
+                placeholder="Tell us about your startup…"
+                className="h-8 w-full bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+                value={aiSearch}
+                onChange={(e) => setAiSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+              />
+              <Button
+                size="sm"
+                onClick={handleAiSearch}
+                className="h-7 rounded-full px-4 text-xs shadow-md shadow-primary/20"
+                disabled={!aiSearch.trim()}
+              >
+                Match
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 ml-auto md:ml-0">
             {user ? (
               <Button size="sm" variant="outline" className="h-9 border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10" asChild>
                 <Link to="/dashboard">My Dashboard</Link>
@@ -87,14 +111,25 @@ function Index() {
                 <Link to="/auth">Get Started</Link>
               </Button>
             )}
-            <button className="md:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
+            <button className="lg:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
               <Compass className="h-6 w-6" />
             </button>
           </div>
         </div>
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="absolute top-full w-full bg-slate-900 border-b border-white/10 p-6 flex flex-col gap-4 text-white text-sm uppercase tracking-widest md:hidden">
+          <div className="absolute top-full w-full bg-slate-900 border-b border-white/10 p-6 flex flex-col gap-4 text-white text-sm uppercase tracking-widest lg:hidden">
+            <div className="md:hidden flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+              <Search className="h-4 w-4 text-white/40" />
+              <input
+                type="text"
+                placeholder="Tell us about your startup…"
+                className="h-8 w-full bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none normal-case tracking-normal"
+                value={aiSearch}
+                onChange={(e) => setAiSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+              />
+            </div>
             <Link to="/navigator" onClick={() => setMenuOpen(false)}>Navigator</Link>
             <Link to="/map" onClick={() => setMenuOpen(false)}>Startup Map</Link>
             <Link to="/events" onClick={() => setMenuOpen(false)}>Events</Link>
@@ -105,80 +140,40 @@ function Index() {
       </nav>
 
       {/* ─── Hero Section ──── */}
-      <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-6 pt-20">
+      <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-background px-6 pt-20">
         {/* Live cinematic map background */}
         <div className="absolute inset-0 z-0">
-          {/* fallback gradient (shows if Mapbox token missing or while loading) */}
-          <div className="absolute -left-1/4 top-0 h-[800px] w-[800px] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
-          <div className="absolute -right-1/4 bottom-0 h-[800px] w-[800px] rounded-full bg-[oklch(0.58_0.10_230)]/10 blur-[120px] animate-pulse" style={{ animationDelay: "2s" }} />
           <HeroLiveMap onReady={(n) => setTrackedCount(n)} flyToRef={flyToRef} />
-          {/* Readability overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950 pointer-events-none" />
-          <div className="absolute inset-0 bg-radial-gradient pointer-events-none" style={{ background: "radial-gradient(ellipse at center, transparent 0%, rgba(2,6,23,0.55) 70%, rgba(2,6,23,0.85) 100%)" }} />
+          {/* Creamy parchment tint to match the brand palette */}
+          <div className="hero-map-tint" />
+          {/* Soft fade only at top + bottom so map stays clean & centered */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none" />
         </div>
 
         {/* LIVE chip top-right */}
-        <div className="absolute top-24 right-6 z-20 hidden md:flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300 backdrop-blur-md">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="absolute top-20 right-6 z-20 hidden md:flex items-center gap-2 rounded-full border border-emerald-600/30 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 backdrop-blur-md shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           Live · {trackedCount ?? "—"} startups tracked
         </div>
 
         {/* Sector legend bottom-right */}
-        <div className="absolute bottom-6 right-6 z-20 hidden lg:flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/40 px-3 py-2.5 backdrop-blur-md">
-          <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/40 mb-1">Sectors</p>
+        <div className="absolute bottom-6 right-6 z-20 hidden lg:flex flex-col gap-1.5 rounded-2xl border border-foreground/10 bg-white/70 px-3 py-2.5 backdrop-blur-md shadow-sm">
+          <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-foreground/50 mb-1">Sectors</p>
           {SECTOR_LEGEND.map((s) => (
-            <div key={s.label} className="flex items-center gap-2 text-[10px] text-white/70">
+            <div key={s.label} className="flex items-center gap-2 text-[10px] text-foreground/70">
               <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
               {s.label}
             </div>
           ))}
         </div>
 
-        <div className="relative z-10 mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex animate-fade-in items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
-            <Sparkles className="h-3 w-3" />
-            Empowering the Utah Startup State
-          </div>
-
-          {/* SR-only h1 keeps semantic structure for SEO/a11y while map dominates visually */}
-          <h1 className="sr-only">Navigate the Silicon Slopes — Utah's startup ecosystem platform</h1>
-          <p className="animate-fade-in-up text-xs md:text-sm font-semibold uppercase tracking-[0.4em] text-white/70">
-            Navigate the <span className="text-primary">Silicon Slopes</span>
-          </p>
-
-          {/* AI Instant Match */}
-          <div className="mt-6 mx-auto max-w-2xl animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-            <div className="group relative rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-2xl transition-all focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
-              <div className="flex items-center gap-3 px-4">
-                <Search className="h-5 w-5 text-white/40 group-focus-within:text-primary transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Tell us about your startup..."
-                  className="h-14 w-full bg-transparent text-white placeholder:text-white/30 focus:outline-none"
-                  value={aiSearch}
-                  onChange={(e) => setAiSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
-                />
-                <Button 
-                  onClick={handleAiSearch} 
-                  className="h-11 rounded-2xl px-6 shadow-lg shadow-primary/20"
-                  disabled={!aiSearch.trim()}
-                >
-                  Match Me
-                </Button>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40">
-              <span>Try: "B2B SaaS in Provo"</span>
-              <span>"Rural manufacturing grants"</span>
-              <span>"UofU student biotech"</span>
-            </div>
-          </div>
-        </div>
+        {/* SR-only h1 for SEO/a11y — hero is intentionally a clean live map */}
+        <h1 className="sr-only">Navigate the Silicon Slopes — Utah's startup ecosystem platform</h1>
 
         {/* Ecosystem Stats Banner */}
-        <div className="relative z-10 mt-20 w-full max-w-7xl border-t border-white/5 pt-12 pb-4">
-          <div className="grid grid-cols-2 gap-10 md:grid-cols-4 md:gap-6">
+        <div className="relative z-10 mt-auto w-full max-w-7xl border-t border-foreground/10 pt-8 pb-4">
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-6">
             <HeroStat value="450" label="Active Companies" />
             <HeroStat value="85" label="State Resources" />
             <HeroStat value="120" label="Capital Sources" />
@@ -435,13 +430,13 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center text-center">
       <div
-        className="text-4xl md:text-5xl font-normal text-white/95 leading-none"
+        className="text-4xl md:text-5xl font-normal text-foreground/90 leading-none"
         style={{ fontFamily: "var(--font-display)" }}
       >
         {value}
-        <span className="text-white/70">+</span>
+        <span className="text-foreground/60">+</span>
       </div>
-      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground/50">
         {label}
       </p>
     </div>

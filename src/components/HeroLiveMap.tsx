@@ -181,12 +181,12 @@ export default function HeroLiveMap({
   if (!token) return null; // parent renders fallback
 
   return (
-    <div className="absolute inset-0">
+    <div className="hero-map-wrap absolute inset-0">
       <Map
         ref={mapRef}
         mapboxAccessToken={token}
         initialViewState={{ longitude: -111.7, latitude: 40.0, zoom: 6.6, pitch: 40, bearing: 10 }}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle="mapbox://styles/mapbox/light-v11"
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
         interactive
