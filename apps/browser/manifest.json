@@ -1,13 +1,57 @@
 {
-  "manifest_version": 3,
-  "name": "Startup.Utah.gov 5.io Navigator",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArZO8eAK7pppiOXLZ4liYzrZ0LmbWduLHt6QsUpHJd3ar3SMxxrvWA4ib+YhH4IY9ke1mLbNi8TCda87GtQWSi24yGwvfLQ17gvKnd2DieVhoKbmu3OpJmEuH81TLLXqSlgd0+8SvkefucMV+Gk2rYhDgMwIVmIsXhZwcrkxzl/SoSnoUQeImTlArudf/CXOMUKsua5SZ1WE663/lskugT5n35jzbshrnM8g5D6Sb3IGyw0HqTiUP8mHSurUUVNidiyc7VXfngFTqKlKtwTMRDBrz6XedFje8URYN1PvZvRkW4b4QiETp2fEYOrh50IDwYgMktWfFeh6x3SOL5uwBZwIDAQAB",
-  "oauth2": {
-    "client_id": "210851808389-km9387h3me7tc2c4q7ot1flfe5kgefms.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/drive.readonly"
-    ]
-  }
+	"manifest_version": 3,
+	"name": "Startup.Utah.gov 5.io Navigator",
+	"description": "Personalize startup.utah.gov for your business stage and goals.",
+	"version": "0.13.27",
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArZO8eAK7pppiOXLZ4liYzrZ0LmbWduLHt6QsUpHJd3ar3SMxxrvWA4ib+YhH4IY9ke1mLbNi8TCda87GtQWSi24yGwvfLQ17gvKnd2DieVhoKbmu3OpJmEuH81TLLXqSlgd0+8SvkefucMV+Gk2rYhDgMwIVmIsXhZwcrkxzl/SoSnoUQeImTlArudf/CXOMUKsua5SZ1WE663/lskugT5n35jzbshrnM8g5D6Sb3IGyw0HqTiUP8mHSurUUVNidiyc7VXfngFTqKlKtwTMRDBrz6XedFje8URYN1PvZvRkW4b4QiETp2fEYOrh50IDwYgMktWfFeh6x3SOL5uwBZwIDAQAB",
+	"oauth2": {
+		"client_id": "210851808389-km9387h3me7tc2c4q7ot1flfe5kgefms.apps.googleusercontent.com",
+		"scopes": [
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/gmail.readonly",
+			"https://www.googleapis.com/auth/drive.readonly"
+		]
+	},
+	"action": {
+		"default_title": "Startup.Utah.gov 5.io Navigator",
+		"default_popup": "src/popup/index.html",
+		"default_icon": {
+			"16": "icon-16.png",
+			"32": "icon-32.png",
+			"48": "icon-48.png",
+			"128": "icon-128.png"
+		}
+	},
+	"icons": {
+		"16": "icon-16.png",
+		"32": "icon-32.png",
+		"48": "icon-48.png",
+		"128": "icon-128.png"
+	},
+	"web_accessible_resources": [
+		{
+			"resources": ["icon-64.png"],
+			"matches": ["https://startup.utah.gov/*"]
+		}
+	],
+	"side_panel": {
+		"default_path": "src/sidepanel/index.html"
+	},
+	"background": {
+		"service_worker": "src/background/index.ts",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["https://startup.utah.gov/*"],
+			"js": ["src/content/index.ts"],
+			"run_at": "document_idle"
+		}
+	],
+	"permissions": ["identity", "storage", "sidePanel", "tabs"],
+	"host_permissions": [
+		"https://gmail.googleapis.com/*",
+		"https://www.googleapis.com/*",
+		"https://startup.utah.gov/*"
+	]
 }

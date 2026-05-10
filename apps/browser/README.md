@@ -4,7 +4,8 @@ A Manifest V3 Chrome extension that personalizes [startup.utah.gov](https://star
 
 The extension reads ambient signals from a founder's Gmail, Google Drive, and a local business-docs folder, infers their stage / industry / geography / gaps via the Convex backend, and overlays the live `startup.utah.gov` site with relevance-ranked badges, a gap-analysis strip, and contextual side-panel citations from the founder's own artifacts.
 
-Spec: `vault/specs/draft/founder-navigator-startup-utah-extension/spec.md`
+Spec: `vault/specs/implemented/founder-navigator-startup-utah-extension/spec.md`
+End-user walkthrough: [`TUTORIAL.md`](./TUTORIAL.md)
 
 ---
 
@@ -131,7 +132,7 @@ bunx convex env set STARTUPSTATE_GOOGLE_CLIENT_ID <same-client-id-as-manifest>
 
 ```bash
 bunx convex env set STARTUPSTATE_GOOGLE_CLIENT_ID <client-id-from-google-cloud>
-bunx convex env set OPENAI_API_KEY <openai-key>
+bunx convex env set STARTUPSTATE_OPENAI_API_KEY <openai-key>
 # OPENROUTER_API_KEY is already configured at the workspace level — no action needed.
 ```
 
@@ -159,6 +160,61 @@ bunx convex dev       # in another terminal — keep running while you develop
 bun test:convex:once  # runs Vitest backend tests
 ```
 
+### What `bun build` produces
+
+The Vite + `@crxjs/vite-plugin` pipeline reads `manifest.json` as the entry manifest, walks every `oauth2`, `action`, `background`, and `content_scripts` reference, and emits a self-contained extension bundle in `apps/browser/dist`:
+
+```
+apps/browser/dist/
+├── manifest.json                # rewritten with hashed asset paths
+├── service-worker-loader.js     # crxjs SW shim that imports the chunked SW
+├── src/popup/index.html         # popup entrypoint (loaded by chrome.action)
+├── assets/
+│   ├── index.html-*.js          # popup React bundle
+│   ├── index.ts-*.js            # background SW + content-script chunks
+│   ├── api-*.js                 # convex/_generated/api shared chunk
+│   ├── storage-*.js             # shared lib chunk
+│   └── index-*.css              # popup CSS
+└── ...                          # source maps (`.map`) for debugging
+```
+
+`dist/manifest.json` is what Chrome actually reads. Don't hand-edit it — regenerate by running `bun --filter @lotzoom/browser build` after editing the source `manifest.json`.
+
+### Pre-flight checks before sharing a build
+
+Run these in order before handing the build to teammates or judges:
+
+```bash
+# 1. Lint + typecheck the extension
+bunx biome check apps/browser
+cd apps/browser && bunx --no -- tsc --noEmit && cd -
+
+# 2. Backend tests must pass (the extension calls these actions)
+bun test:convex:once convex/startupState/
+
+# 3. Clean build
+rm -rf apps/browser/dist
+bun --filter @lotzoom/browser build
+
+# 4. Sanity-check the manifest in dist/
+cat apps/browser/dist/manifest.json | python3 -m json.tool | head -30
+
+# 5. Load apps/browser/dist at chrome://extensions and confirm:
+#    - The extension ID matches the one registered in Google Cloud
+#    - "Connect Google" works end-to-end (popup shows your email)
+#    - Visit startup.utah.gov and confirm the gap strip + badges render
+```
+
+### Versioning
+
+Bump `apps/browser/manifest.json` `version` whenever you produce a build for distribution:
+
+- **Hackathon iterations:** `0.0.1` → `0.0.2` → `0.0.3` (any monotonic increment is fine).
+- **Pre-release / RC:** `0.1.0`, `0.2.0` for milestone drops.
+- **Public Web Store:** `1.0.0` and onward; Chrome rejects re-uploads that don't strictly increment.
+
+Manifest version syncs with `apps/browser/package.json` — keep them aligned by hand for now (small enough surface that codifying the lockstep isn't worth it).
+
 ---
 
 ## Troubleshooting
@@ -171,6 +227,96 @@ bun test:convex:once  # runs Vitest backend tests
 | Extension ID changes when a teammate loads it | Their `manifest.json` is missing the `key` field, or the file got corrupted. Re-paste the public key. |
 | Convex action returns "STARTUPSTATE_GOOGLE_CLIENT_ID is not set" | Run `bunx convex env set STARTUPSTATE_GOOGLE_CLIENT_ID <id>` and restart `convex dev`. |
 | Gmail or Drive API returns 403 | API not enabled on the Cloud project (step 5), OR the user didn't grant that scope (the spec covers this in Error: OAuth scope denial). |
+
+---
+
+## Chrome Web Store submission
+
+A submission to the Web Store is **not required for the hackathon demo** — judges can run the unpacked build. Submit only when shipping more broadly. Allow ~1–2 weeks of review for the first listing because of the restricted Gmail/Drive scopes (subsequent updates clear faster).
+
+### Pre-submission checklist
+
+- [ ] **Manifest hygiene.** `version` bumped, `description` ≤ 132 chars, `name` ≤ 45 chars, `permissions` and `host_permissions` are the minimum that work.
+- [ ] **Icons.** Provide `icons` entries at 16, 32, 48, and 128 px in `apps/browser/public/icons/` and reference them in `manifest.json`. The 128 px icon is required and used as the Web Store listing image preview.
+- [ ] **Screenshots.** 1280×800 or 640×400 PNGs, up to 5. Show the popup, the gap strip on `startup.utah.gov`, the side panel with citations, and one signal-source flow.
+- [ ] **Promo tile** (optional but recommended): 440×280 small tile, 920×680 marquee.
+- [ ] **Privacy policy URL.** Required for any extension that touches user data — host the policy at a stable URL (e.g. `https://startup.utah.gov/...` or a GitHub Pages page) and paste the URL into the Web Store listing.
+- [ ] **Single-purpose justification.** Restricted scopes (`gmail.readonly`, `drive.readonly`) require a single-purpose statement and a short narrative explaining *why* each scope is needed. Use the spec's "Why" section as the source of truth.
+- [ ] **Demo video** (recommended): Loom / YouTube unlisted, ≤ 60 seconds. Walk through `Connect Google → ingest → visit startup.utah.gov`. Pasted into the listing description, this dramatically reduces back-and-forth with the reviewer.
+- [ ] **Test users widened.** Before going **Production** in Google Auth Platform → Audience, the consent screen must pass Google's CASA review for the restricted scopes — see "Going to production" below. Until then, the listing is publishable but only test users can actually sign in.
+
+### Producing the upload artifact
+
+Chrome Web Store accepts a `.zip` of the unpacked extension. **Do not include the source folder, `node_modules`, source maps, or `key.pem`.**
+
+```bash
+# From repo root
+rm -rf apps/browser/dist
+bun --filter @lotzoom/browser build
+
+# Strip source maps from the upload (they're useful locally; not for the store)
+find apps/browser/dist -name "*.map" -delete
+
+# Zip from inside dist/ so paths inside the archive are flat
+cd apps/browser/dist
+zip -r "../founder-navigator-$(date +%Y%m%d).zip" .
+cd -
+
+# Verify: the archive should be < 5 MB and contain manifest.json at the root
+unzip -l apps/browser/founder-navigator-*.zip | head
+```
+
+> **NEVER ship a build that includes `key.pem`.** Confirm with `unzip -l ... | grep key.pem` (output should be empty).
+
+### Submitting to the Chrome Developer Dashboard
+
+1. Sign in to https://chrome.google.com/webstore/devconsole/ with the **publishing account** (one-time $5 dev fee). Use a project-owned Google account, not a personal one — the listing follows the account.
+2. **New item** → upload the `.zip`.
+3. Fill in the **Store listing** tab:
+   - Detailed description (paste the spec's "Why" + key user benefits, not implementation detail).
+   - Category: *Productivity* (alternative: *Tools*).
+   - Language: English.
+   - Screenshots, promo tiles, icon — all from the pre-submission checklist.
+4. Fill in the **Privacy practices** tab:
+   - **Single-purpose statement:** "Personalize startup.utah.gov for Utah founders by reading their existing Gmail / Drive / local docs and overlaying relevance and gap signals on the live site."
+   - **Permissions justifications:** one short paragraph per permission (`identity`, `storage`, `host_permissions[startup.utah.gov]`, `host_permissions[gmail.googleapis.com]`, `host_permissions[www.googleapis.com]`).
+   - **OAuth scope justifications:**
+     - `userinfo.email` — "Establish founder identity in our backend; no email sending."
+     - `gmail.readonly` — "Read recent message subjects and bodies (last 90 days, founder-initiated only) to infer business stage, industry, and unmet lifecycle steps. Read-only; no archives, no labels modified, no messages sent."
+     - `drive.readonly` — "Read text-extractable files in a folder the founder explicitly picks. Read-only; no folders/files outside the picked one are accessed; no writes."
+   - **Data usage:** declare collection of email content + Drive content + arbitrary local file content. Mark **not sold to third parties**, **not used for purposes unrelated to the single purpose**, **not used to determine creditworthiness**.
+   - Privacy policy URL.
+5. Fill in the **Distribution** tab:
+   - Visibility: **Private** (until Production-ready) or **Unlisted** (link-only sharing during the demo period).
+   - Distribution: visible to specified emails initially.
+6. **Submit for review.**
+
+### Going to production (post-hackathon)
+
+The OAuth consent screen must move from **Testing** to **Production** before the listing can be Public. Restricted scopes (`gmail.readonly`, `drive.readonly`) trigger Google's CASA security assessment:
+
+1. **Verify domain ownership** in Google Cloud Console (the support email's domain).
+2. **Submit a video demo** showing each restricted scope being requested and explaining the user-visible value.
+3. **Apply for the security assessment** via the Google Auth Platform → Audience → Production flow. CASA Tier 2 is required for `gmail.readonly`; Tier 1 for `drive.readonly` if scoped to a single picked folder.
+4. **Independent third-party CASA assessment** by an authorized auditor — typical cost $5k–$15k, timeline 4–8 weeks.
+
+Until CASA passes, keep the consent screen in **Testing** mode and add specific judges / testers to **Test users** (≤ 100). The Web Store listing can still be Private/Unlisted in this state — only the OAuth flow gates the user count.
+
+### Updating an existing listing
+
+For each subsequent release:
+
+1. Bump `apps/browser/manifest.json` `version` (must strictly increase).
+2. Re-run the pre-submission checklist + zip step above.
+3. Web Store Dashboard → **Package** tab → **Upload new package**.
+4. Add release notes in **Store listing**.
+5. Submit. Updates that don't change permissions typically clear review in hours; permission changes re-trigger the full review.
+
+### Distribution alternatives (if you skip the Web Store)
+
+- **Direct unpacked sharing** — works for any teammate or judge with Developer Mode access. The simplest path during the hackathon.
+- **`.crx` + `update_url`** — Chrome will install a self-hosted `.crx` only via Group Policy on managed devices. Not worth the setup unless you're shipping inside an org.
+- **Edge Add-ons store** — Chromium-based but a separate listing. Out of scope for v1.
 
 ---
 

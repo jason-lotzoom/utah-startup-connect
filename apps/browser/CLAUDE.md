@@ -15,6 +15,18 @@ Follow-on todos at `vault/todos/startupstate/`. Do not pull these into this spec
 - Dev mode (`bun --filter @lotzoom/browser dev`) does live HMR for popup / options / content scripts via crxjs.
 - The package name in `apps/browser/package.json` is `@lotzoom/browser`.
 
+## Production zip packaging
+
+When producing a versioned production zip (`founder-navigator-<version>-<YYYYMMDD>.zip`):
+
+- **EXCLUDE `*.map` files.** Sourcemaps inflate the zip ~4x and have no use in the published artifact. The vite config keeps `build.sourcemap: true` so local debugging in `dist/` still works.
+- Run from `apps/browser/`:
+  ```
+  (cd dist && zip -rq "../founder-navigator-<version>-<date>.zip" . -x '*.map')
+  ```
+- Always rebuild (`bun run build`) before zipping so `dist/` reflects the bumped manifest version.
+- Replace any prior versioned zip in `apps/browser/` (`git rm -f` the old one) so only the current zip lives at the repo root for the extension folder.
+
 ## OAuth — read this before touching auth code
 
 This extension uses **`chrome.identity.getAuthToken`** with a Google Cloud OAuth client of type **Chrome Extension** (not Web application).
